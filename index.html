@@ -1,0 +1,2219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1.3 位置变化快慢的描述——速度 · 可交互课件</title>
+<style>
+  :root{
+    /* 配色基准：原版 Manim —— 纯黑底 + 白线为主 + Manim 官方色常量
+       红=位移 Δx  蓝=时间 Δt  黄=速度 v（本课主角量）  绿/紫=对照路径与辅助  一屏彩色 ≤3 */
+    --bg:#000000; --bg2:#0a0a0a; --panel:#0e0e0e; --line:#242424; --line2:#383838;
+    --ink:#FFFFFF; --ink2:#B0B0B0; --muted:#888888;
+    --red:#FC6255; --blue:#58C4DD; --yellow:#FFFF00; --gold:#F0AC5F;
+    --green:#83C167; --purple:#9A72AC; --teal:#5CD0B3;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC","WenQuanYi Zen Hei",sans-serif;
+    overflow:hidden;
+  }
+  .app{display:grid; grid-template-rows:auto auto 1fr auto auto; height:100vh;}
+
+  /* ---------- 顶栏 ---------- */
+  header{display:flex; align-items:baseline; gap:14px; padding:10px 18px 8px; flex-wrap:wrap; row-gap:3px;
+    background:var(--bg2); border-bottom:1px solid var(--line);}
+  header h1{font-size:16px; margin:0; font-weight:600; letter-spacing:.5px; white-space:nowrap;}
+  .act{font-size:13px; color:var(--yellow); border:1px solid var(--line2); border-radius:10px;
+    padding:1px 9px; white-space:nowrap;}
+  .steptitle{font-size:15px; color:var(--ink); font-weight:600;}
+  .stepsn{margin-left:auto; font-size:13px; color:var(--ink2); font-variant-numeric:tabular-nums;}
+
+  /* ---------- 顶部步骤导航条（按幕分组） ---------- */
+  .topnav{display:flex; align-items:center; gap:5px; padding:5px 14px 6px;
+    background:var(--bg2); border-bottom:1px solid var(--line); overflow-x:auto; overflow-y:hidden;}
+  .topnav .grouplab{flex:0 0 auto; font-size:11px; letter-spacing:.6px; color:var(--muted); font-weight:600; white-space:nowrap;}
+  .topnav .sep{flex:0 0 auto; width:1px; height:15px; background:var(--line2); margin:0 5px;}
+  .topnav a{flex:0 0 auto; min-width:27px; height:22px; padding:0 7px; display:inline-flex; align-items:center; justify-content:center;
+    font-size:12px; font-variant-numeric:tabular-nums; color:var(--ink2); background:#141414;
+    border:1px solid var(--line2); border-radius:6px; cursor:pointer;}
+  .topnav a:hover{background:#1e1e1e; color:var(--ink);}
+  .topnav a.on{background:rgba(255,255,0,0.12); border-color:var(--yellow); color:var(--yellow); font-weight:700;}
+
+  /* ---------- 主体 ---------- */
+  .stage{display:grid; grid-template-columns:1fr 286px; min-height:0;}
+  .canvaswrap{position:relative; min-width:0; min-height:0; padding:6px 8px 0 8px;}
+  canvas{display:block; width:100%; height:100%;}
+  .hint{padding:7px 20px 0 20px; font-size:12.5px; color:var(--muted); min-height:24px;}
+  .hint b{color:var(--yellow); font-weight:600;}
+
+  /* ---------- 右栏 ---------- */
+  aside{background:var(--panel); border-left:1px solid var(--line); padding:10px 12px 14px; overflow-y:auto; min-height:0;}
+  aside h3{font-size:12px; color:var(--muted); margin:14px 0 6px; font-weight:600; letter-spacing:.5px;}
+  aside h3:first-child{margin-top:2px;}
+  .rd{display:flex; align-items:baseline; justify-content:space-between; gap:8px; padding:3px 0;
+    font-size:12.5px; color:var(--ink2); border-bottom:1px dashed #242424;}
+  .rd span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .rd b{font-size:15px; color:var(--ink); font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .rd b.yellow{color:var(--yellow);} .rd b.red{color:var(--red);} .rd b.blue{color:var(--blue);}
+  .rd b.green{color:var(--green);} .rd b.purple{color:var(--purple);} .rd b.grey{color:var(--muted);}
+  .rd b.gold{color:var(--gold);}
+  .formula{font-size:13.5px; color:var(--ink); background:#141414; border:1px solid var(--line2);
+    border-radius:8px; padding:8px 10px; line-height:1.5; word-break:break-word;}
+  .note{font-size:12.5px; color:var(--ink2); line-height:1.62;}
+  .note b{color:var(--yellow); font-weight:600;}
+
+  /* ---------- 底栏 ---------- */
+  footer{display:flex; align-items:center; gap:8px; flex-wrap:wrap; row-gap:6px;
+    padding:8px 14px 9px; background:var(--bg2); border-top:1px solid var(--line);}
+  button{font-family:inherit; font-size:12.5px; color:var(--ink2); background:#141414;
+    border:1px solid var(--line2); border-radius:6px; padding:5px 10px; cursor:pointer; white-space:nowrap;}
+  button:hover{background:#1e1e1e; color:var(--ink);}
+  button.on{background:rgba(255,255,0,0.12); border-color:var(--yellow); color:var(--yellow); font-weight:700;}
+  button.main{background:#1a1a1a; color:var(--ink);}
+  .bar{position:relative; flex:1 1 140px; min-width:100px; height:6px; background:#141414; border-radius:3px; cursor:pointer;}
+  .bar i{display:block; height:100%; width:0; background:var(--yellow); border-radius:3px;}
+  .bar u{position:absolute; top:-2px; width:1px; height:10px; background:#4a4a4a;}
+  .slider{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted);}
+  .slider input[type=range]{width:110px; accent-color:#4a4a4a;}
+  .slider b{color:var(--ink); font-variant-numeric:tabular-nums; min-width:46px; text-align:right;}
+  .grp{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  .grp .lab{font-size:12.5px; color:var(--muted);}
+  .hidden{display:none !important;}
+
+  @media (max-width: 760px){
+    .stage{grid-template-columns:1fr;}
+    aside{border-left:none; border-top:1px solid var(--line); max-height:32vh;}
+    .hint{font-size:12px;}
+    header h1{font-size:14px;}
+    .steptitle{font-size:13px;}
+    .slider input[type=range]{width:80px;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>1.3 位置变化快慢的描述——速度</h1>
+    <span class="act" id="actTag">第一幕</span>
+    <span class="steptitle" id="stepTitle">—</span>
+    <span class="stepsn" id="stepSn">1 / 19</span>
+  </header>
+
+  <nav class="topnav" id="toc" aria-label="步骤导航"></nav>
+
+  <div class="stage">
+    <div class="canvaswrap">
+      <canvas id="cv"></canvas>
+    </div>
+    <aside>
+      <h3>这一刻的读数</h3>
+      <div id="rows"></div>
+      <h3>这一刻的公式</h3>
+      <div class="formula" id="rdFormula">—</div>
+      <h3>提示</h3>
+      <div class="note" id="rdNote">—</div>
+    </aside>
+  </div>
+
+  <div class="hint" id="hint"></div>
+
+  <footer>
+    <button id="btnPrev">◀ 上一步</button>
+    <button id="btnNext" class="main">下一步 ▶</button>
+    <button id="btnReset">↺ 复位本步</button>
+    <div class="bar" id="prog"><i></i></div>
+
+    <div class="slider hidden" id="wrapT">
+      <span>走到哪儿</span><input type="range" id="rgT" min="0" max="100" value="100"><b id="lbT">100%</b>
+    </div>
+    <div class="slider hidden" id="wrapSeg">
+      <span>选哪一段</span><input type="range" id="rgSeg" min="0" max="5" step="1" value="0"><b id="lbSeg">第 0→1 段</b>
+    </div>
+    <div class="grp hidden" id="wrapPick">
+      <span class="lab" id="pickLab">选择</span>
+      <span id="pickBtns"></span>
+    </div>
+  </footer>
+</div>
+
+<script>
+/* =====================================================================
+   viz_sp_physics.js —— 1.3《位置变化快慢的描述——速度》物理内核
+   纯函数 + runSelfTest()，与画面完全解耦。
+   规范：/root/教学/可视化/风格与技术路线.md（第五·铁律 1/3）
+   所有数据来源：教材 P21–P25、教参 P24–P29（表 1-2 原样转录）
+   ===================================================================== */
+(function () {
+  'use strict';
+  var P = {};
+
+  /* ==========================================================
+     〇、本课使用的三组"真实对象"（数据源，全部可溯源）
+     ========================================================== */
+
+  /* ① 纸带 A：教材图 1.3-2 / 1.3-3 的纸带（匀变速，每 0.02 s 一个点）
+        x(t) = 0.30t + 0.30t²  →  v(t) = 0.30 + 0.60t
+        用于：平均速度、瞬时速度、极限（DG/DF）、三种 Δt 选法 */
+  P.TAPE_A = { name: '纸带 A（匀变速）', x0: 0, v0: 0.30, a: 0.60, T: 0.60, dtRaw: 0.02, per: 5 };
+
+  /* ② 纸带 B：另一条手拉纸带（变速，越拉越慢地加速）
+        v(t) = 0.30 + 1.20t − 0.75t²  →  x(t) = 0.30t + 0.60t² − 0.25t³
+        用于：表 2（每 3 个点取计数点，Δt = 0.06 s）与 v–t 图像 */
+  P.TAPE_B = { name: '纸带 B（手拉）', x0: 0, b1: 0.30, b2: 0.60, b3: -0.25, T: 0.60, dtRaw: 0.02, per2: 3 };
+
+  /* ③ 教参表 1-2（P28）：气垫导轨 + 遮光片 + 光电门，同一高度滑下
+        —— 原样转录，不得改动 */
+  P.TABLE12 = [
+    { d: 0.300,  dt: [0.632, 0.635, 0.636], v: 0.47 },
+    { d: 0.200,  dt: [0.460, 0.459, 0.458], v: 0.44 },
+    { d: 0.110,  dt: [0.264, 0.263, 0.263], v: 0.42 },
+    { d: 0.038,  dt: [0.094, 0.094, 0.093], v: 0.41 },
+    { d: 0.024,  dt: [0.059, 0.058, 0.058], v: 0.41 },
+    { d: 0.0086, dt: [0.021, 0.021, 0.021], v: 0.41 }
+  ];
+  /* 官方解读：遮光片宽度小于 3.8 cm 之后，平均速度都是 0.41 m/s，
+     即滑块前端 P 到达 A 点的瞬时速度 = 0.41 m/s */
+  P.V_A_OFFICIAL = 0.41;
+
+  /* ==========================================================
+     一、运动学：位置 / 速度 / 平均速度（纯解析）
+     ========================================================== */
+
+  /** 匀变速：x(t) = x0 + v0·t + a·t²/2 */
+  P.xOf = function (m, t) { return m.x0 + m.v0 * t + 0.5 * m.a * t * t; };
+  /** 匀变速：v(t) = v0 + a·t */
+  P.vOf = function (m, t) { return m.v0 + m.a * t; };
+  /** 一段的平均速度 v̄ = Δx/Δt（t2 ≠ t1） */
+  P.vAvg = function (m, t1, t2) { return (P.xOf(m, t2) - P.xOf(m, t1)) / (t2 - t1); };
+  /** 区间中点时刻 */
+  P.midOf = function (t1, t2) { return 0.5 * (t1 + t2); };
+  /** 平均速度与某时刻瞬时速度之差（"误差"） */
+  P.vAvgErr = function (m, t1, t2, tE) { return P.vAvg(m, t1, t2) - P.vOf(m, tE); };
+
+  /* ---- 纸带 B 的解析式（多项式，非匀变速） ---- */
+  P.xOfB = function (t) { var b = P.TAPE_B; return b.b1 * t + b.b2 * t * t + b.b3 * t * t * t; };
+  P.vOfB = function (t) { var b = P.TAPE_B; return b.b1 + 2 * b.b2 * t + 3 * b.b3 * t * t; };
+  P.vAvgB = function (t1, t2) { return (P.xOfB(t2) - P.xOfB(t1)) / (t2 - t1); };
+
+  /* ==========================================================
+     二、遮光片 + 光电门：v̄(d) 的精确解
+     滑块以 v0 通过光电门、加速度 a；遮光片宽 d。
+     遮光时间 Δt 满足  v0·Δt + a·Δt²/2 = d，
+     v̄ = d/Δt，消去 Δt 得解析式  v̄(d) = (√(v0²+2ad) + v0)/2。
+     d = 0 时 v̄ = v0（精确）。
+     ========================================================== */
+  P.plateDt = function (v0, a, d) {
+    var D = v0 * v0 + 2 * a * d;
+    return (-v0 + Math.sqrt(D)) / a;
+  };
+  P.plateAvg = function (v0, a, d) {
+    return (Math.sqrt(v0 * v0 + 2 * a * d) + v0) / 2;
+  };
+  /** 模型偏差：用一段的平均速度代表瞬时速度，先天差多少 */
+  P.plateBias = function (d, v0, a) { return P.plateAvg(v0, a, d) - v0; };
+
+  /* ---- 误差预算（示意模型，参数在右栏明写） ----
+     ① 模型偏差 b(d) = v̄(d) − v0        随 d 单调增（d→0 才为 0）
+     ② 测量误差 e(d) = v̄·(δd/d + δt/Δt)  随 d 单调减（d 小则相对误差大）
+     总误差 E(d) = b(d) + e(d)            在内部取到极小 → "合适 ≠ 最小" */
+  P.plateMeasErr = function (d, v0, a, dd, dt) {
+    var vb = P.plateAvg(v0, a, d), ts = P.plateDt(v0, a, d);
+    return vb * (dd / d + dt / ts);
+  };
+  P.plateTotalErr = function (d, v0, a, dd, dt) {
+    return P.plateBias(d, v0, a) + P.plateMeasErr(d, v0, a, dd, dt);
+  };
+  /** 总误差极小点（黄金分割搜索，纯数值、与画面无关） */
+  P.bestWidth = function (v0, a, dd, dt, lo, hi) {
+    lo = (lo === undefined) ? 0.002 : lo; hi = (hi === undefined) ? 0.30 : hi;
+    var g = 0.6180339887498949, x1 = hi - g * (hi - lo), x2 = lo + g * (hi - lo);
+    var f1 = P.plateTotalErr(x1, v0, a, dd, dt), f2 = P.plateTotalErr(x2, v0, a, dd, dt), i;
+    for (i = 0; i < 200; i++) {
+      if (f1 < f2) { hi = x2; x2 = x1; f2 = f1; x1 = hi - g * (hi - lo); f1 = P.plateTotalErr(x1, v0, a, dd, dt); }
+      else { lo = x1; x1 = x2; f1 = f2; x2 = lo + g * (hi - lo); f2 = P.plateTotalErr(x2, v0, a, dd, dt); }
+    }
+    return 0.5 * (lo + hi);
+  };
+
+  /* ==========================================================
+     三、最小二乘直线拟合（截距外推用）
+     ========================================================== */
+  P.fitLine = function (pts) {
+    var n = pts.length, sx = 0, sy = 0, sxx = 0, sxy = 0, syy = 0, i, x, y;
+    for (i = 0; i < n; i++) { x = pts[i][0]; y = pts[i][1]; sx += x; sy += y; sxx += x * x; sxy += x * y; syy += y * y; }
+    var dxx = n * sxx - sx * sx, dxy = n * sxy - sx * sy, dyy = n * syy - sy * sy;
+    var k = dxy / dxx, b = (sy - k * sx) / n;
+    var r2 = (dyy > 0) ? (dxy * dxy) / (dxx * dyy) : 1;
+    return { k: k, b: b, r2: r2 };
+  };
+  /** 表 1-2 → [[d, v̄], …] */
+  P.table12Pts = function () {
+    return P.TABLE12.map(function (r) { return [r.d, r.v]; });
+  };
+
+  /* ==========================================================
+     四、反例素材
+     ========================================================== */
+  /* 反例一：从同一地点同时出发、同时到达同一终点，一条绕远、一条走近路 */
+  P.PATH_FAR = [[0, 0], [0, 4], [6, 4], [6, 2]];
+  P.PATH_NEAR = [[0, 0], [6, 2]];
+  P.PATH_T = 20;                         // 两条路径所用时间相同：20 s
+  P.polyLen = function (pts) {
+    var L = 0, i;
+    for (i = 1; i < pts.length; i++) { L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); }
+    return L;
+  };
+  /** 折线上按路程比例取点（s ∈ [0,1]） */
+  P.pointOn = function (pts, s) {
+    var L = P.polyLen(pts), want = Math.max(0, Math.min(1, s)) * L, acc = 0, i, seg, t;
+    if (L <= 0) { return { x: pts[0][0], y: pts[0][1] }; }
+    for (i = 1; i < pts.length; i++) {
+      seg = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+      if (acc + seg >= want) {
+        t = seg > 0 ? (want - acc) / seg : 0;
+        return { x: pts[i - 1][0] + t * (pts[i][0] - pts[i - 1][0]),
+                 y: pts[i - 1][1] + t * (pts[i][1] - pts[i - 1][1]) };
+      }
+      acc += seg;
+    }
+    return { x: pts[pts.length - 1][0], y: pts[pts.length - 1][1] };
+  };
+  /* 反例二：一东一南，路程与时间之比都是 20 m/s */
+  P.CAR_E = { from: [0, 0], to: [20, 0] };
+  P.CAR_S = { from: [0, 0], to: [0, -20] };
+  P.CAR_T = 1;                           // 都是 1 s
+
+  /* ==========================================================
+     五、速率：匀速圆周运动（速率不变、速度变）
+     ========================================================== */
+  P.circleP = function (R, w, t) { return { x: R * Math.cos(w * t), y: R * Math.sin(w * t) }; };
+  P.circleV = function (R, w, t) { return { x: -R * w * Math.sin(w * t), y: R * w * Math.cos(w * t) }; };
+  /** 一段时间内速度变化量的大小（不为 0 才说明"速度变了"） */
+  P.dvMag = function (R, w, t1, t2) {
+    var a = P.circleV(R, w, t1), b = P.circleV(R, w, t2);
+    return Math.hypot(b.x - a.x, b.y - a.y);
+  };
+
+  /* ==========================================================
+     六、"平均速度" vs "速度的平均"
+     等间隔取 n 个时刻 t_k = k·T（k=1..n），匀变速：
+        速度的平均 = v0 + a·T·(n+1)/2
+        平均速度   = v0 + a·(n·T)/2
+        两者之差恒为 a·T/2（与 n 无关）
+     ========================================================== */
+  P.meanOfSpeeds = function (m, T, n) {
+    var s = 0, k;
+    for (k = 1; k <= n; k++) { s += P.vOf(m, k * T); }
+    return s / n;
+  };
+  P.meanOfSpeedsTheory = function (m, T, n) { return m.v0 + m.a * T * (n + 1) / 2; };
+
+  /* ==========================================================
+     七、v–t 图像：两条迷思的反例素材
+     ========================================================== */
+  /* 迷思一："图线在横轴下方 = 减速"。反例：v(t) = 0.60 − 1.20t（0 ≤ t ≤ 0.9），
+     后半段 v < 0 —— 它是"反向运动"，而且 |v| 在变大（在加速）。 */
+  P.MYTH_V = { v0: 0.60, a: -1.20 };
+  P.mythV = function (t) { return P.MYTH_V.v0 + P.MYTH_V.a * t; };
+  /* 迷思二："图线是曲线 = 做曲线运动"。反例：纸带 B 的 v–t 是曲线，
+     但纸带只沿一条直线运动（轨迹是直线）。 */
+
+  /* ==========================================================
+     八、自检：物理专项断言（页面内跑，报出用例数与最大误差）
+     ========================================================== */
+  P.runSelfTest = function () {
+    var cases = 0, worst = 0, bad = [];
+    function chk(a, b, tag, tol) {
+      cases++;
+      var e = Math.abs(a - b);
+      if (e > worst) { worst = e; }
+      if (e > (tol === undefined ? 1e-9 : tol)) { bad.push(tag + ' err=' + e.toExponential(2)); }
+    }
+    function chkT(cond, tag) { cases++; if (!cond) { bad.push(tag); } }
+    var A = P.TAPE_A, i, j, t1, t2, dt, tE, m;
+
+    /* ① 匀变速·中间时刻法则：v̄[t1,t2] = v((t1+t2)/2)（代数恒等，误差应为 0） */
+    var segs = [[0, 0.6], [0.1, 0.5], [0.02, 0.2], [0.24, 0.36], [0.5, 0.52], [0.06, 0.6]];
+    for (i = 0; i < segs.length; i++) {
+      chk(P.vAvg(A, segs[i][0], segs[i][1]), P.vOf(A, P.midOf(segs[i][0], segs[i][1])), '①中间时刻法则');
+    }
+    /* ② 对称区间：v̄[t−Δ/2, t+Δ/2] 精确等于 v(t)，Δ 任意 */
+    var dts = [0.02, 0.04, 0.06, 0.10, 0.20];
+    var ts = [0.06, 0.12, 0.30, 0.44];
+    for (i = 0; i < ts.length; i++) {
+      for (j = 0; j < dts.length; j++) {
+        tE = ts[i]; dt = dts[j];
+        if (tE - dt / 2 < 0 || tE + dt / 2 > A.T) { continue; }
+        chk(P.vAvg(A, tE - dt / 2, tE + dt / 2), P.vOf(A, tE), '②对称区间=该点瞬时速度');
+      }
+    }
+    /* ③ 不对称区间：误差恒等于 a·(中点 − tE)，Δt 再小也停在这儿 */
+    var asym = [[0.00, 0.10], [0.00, 0.06], [0.20, 0.26], [0.30, 0.36]];
+    for (i = 0; i < asym.length; i++) {
+      t1 = asym[i][0]; t2 = asym[i][1]; tE = 0.30;
+      if (t1 > tE || t2 < tE) { continue; }   // 区间必须含 E 才叫"代表 E 的速度"
+      chk(P.vAvgErr(A, t1, t2, tE), A.a * (P.midOf(t1, t2) - tE), '③不对称区间误差=a·(中点−tE)');
+    }
+    /* ④ 匀速直线运动（a = 0）：任意段平均速度 = 瞬时速度 */
+    m = { x0: 0, v0: 2.0, a: 0 };
+    for (i = 0; i < segs.length; i++) { chk(P.vAvg(m, segs[i][0], segs[i][1]), 2.0, '④匀速时平均速度=瞬时速度'); }
+
+    /* ⑤ 遮光片：d = 0 精确等于 v0；v̄(d) 单调递增且 ≥ v0 */
+    var v0s = [0.41, 0.80, 1.50], as = [0.19, 0.60, 1.20];
+    for (i = 0; i < v0s.length; i++) {
+      for (j = 0; j < as.length; j++) {
+        chk(P.plateAvg(v0s[i], as[j], 0), v0s[i], '⑤d=0 时 v̄=v0');
+        chkT(P.plateAvg(v0s[i], as[j], 0.30) > P.plateAvg(v0s[i], as[j], 0.038), '⑤v̄(d) 单调递增');
+        chkT(P.plateAvg(v0s[i], as[j], 0.30) > v0s[i], '⑤v̄(d) ≥ v0');
+      }
+    }
+    /* ⑥ 逆解自洽：由 d 解出 Δt、再算 d/Δt，必须回到解析式 */
+    for (i = 0; i < P.TABLE12.length; i++) {
+      var r = P.TABLE12[i];
+      chk(r.d / P.plateDt(0.41, 0.19, r.d), P.plateAvg(0.41, 0.19, r.d), '⑥d/Δt 自洽', 1e-9);
+    }
+    /* ⑦ 教参表 1-2：报表 v 与 d/Δt̄ 一致（|差| < 0.01 m/s，取两位有效数字所致） */
+    for (i = 0; i < P.TABLE12.length; i++) {
+      r = P.TABLE12[i];
+      var tm = (r.dt[0] + r.dt[1] + r.dt[2]) / 3;
+      chkT(Math.abs(r.d / tm - r.v) < 0.011, '⑦表 1-2 第 ' + (i + 1) + ' 行 v=d/Δt 与报表一致');
+      cases++;
+      if (Math.abs(r.d / tm - r.v) > worst) { worst = Math.abs(r.d / tm - r.v); }
+    }
+    /* ⑧ 表 1-2 的收敛性：后三行完全相同（0.41） */
+    chkT(P.TABLE12[3].v === P.TABLE12[4].v && P.TABLE12[4].v === P.TABLE12[5].v, '⑧38 mm 之后收敛到 0.41');
+    /* ⑨ 线性拟合：精确共线点 → 斜率/截距零误差 */
+    var col = [], k;
+    for (k = 0; k <= 5; k++) { col.push([k * 0.1, 2.5 * k * 0.1 + 0.41]); }
+    var f = P.fitLine(col);
+    chk(f.k, 2.5, '⑨拟合斜率', 1e-12); chk(f.b, 0.41, '⑨拟合截距', 1e-12); chk(f.r2, 1, '⑨r²=1', 1e-12);
+    /* ⑩ 表 1-2 外推：夹在 [0.39, 0.41] 且与官方 0.41 相差 < 0.02 */
+    var f12 = P.fitLine(P.table12Pts());
+    chkT(f12.b > 0.39 && f12.b < 0.41, '⑩外推截距落在 0.39–0.41');
+    chkT(Math.abs(f12.b - P.V_A_OFFICIAL) < 0.02, '⑩外推截距≈官方 0.41');
+    chkT(f12.r2 > 0.95, '⑩拟合 r² > 0.95');
+
+    /* ⑪ 反例一：两条路径路程不同、位移相同 → 路程/时间分不开它们 */
+    var Lf = P.polyLen(P.PATH_FAR), Ln = P.polyLen(P.PATH_NEAR);
+    chkT(Lf > Ln + 1e-9, '⑪绕远的路程更大');
+    var disp = Math.hypot(6 - 0, 2 - 0);
+    chk(Ln, disp, '⑪近路是直线，路程=位移大小');
+    chk(disp / P.PATH_T, disp / P.PATH_T, '⑪两车 位移/时间 相同');
+    chkT(Math.abs(Lf / P.PATH_T - Ln / P.PATH_T) > 0.2, '⑪两车 路程/时间 不同');
+    var pf = P.pointOn(P.PATH_FAR, 1), pn = P.pointOn(P.PATH_NEAR, 1);
+    chk(pf.x, 6, '⑪绕远路径终点 x'); chk(pf.y, 2, '⑪绕远路径终点 y');
+    chk(pn.x, 6, '⑪近路终点 x'); chk(pn.y, 2, '⑪近路终点 y');
+    chk(P.polyLen([[0, 0], [3, 4]]), 5, '⑪折线长度');   // 3-4-5 校验
+
+    /* ⑫ 反例二：路程/时间 相同（都是 20 m/s），位移方向不同 → 速度不同 */
+    var ve = { x: (P.CAR_E.to[0] - P.CAR_E.from[0]) / P.CAR_T, y: (P.CAR_E.to[1] - P.CAR_E.from[1]) / P.CAR_T };
+    var vs = { x: (P.CAR_S.to[0] - P.CAR_S.from[0]) / P.CAR_T, y: (P.CAR_S.to[1] - P.CAR_S.from[1]) / P.CAR_T };
+    chk(Math.hypot(ve.x, ve.y), 20, '⑫东行车速率 20 m/s');
+    chk(Math.hypot(vs.x, vs.y), 20, '⑫南行车速率 20 m/s');
+    chkT(Math.hypot(ve.x - vs.x, ve.y - vs.y) > 1e-9, '⑫两个速度矢量不同');
+
+    /* ⑬ 平均速度 ≠ 速度的平均：差恒为 a·T/2 */
+    m = { x0: 0, v0: 0.30, a: 0.60 };
+    var ns = [3, 5, 8], Ts = [0.02, 0.06, 0.10];
+    for (i = 0; i < ns.length; i++) {
+      for (j = 0; j < Ts.length; j++) {
+        var n = ns[i], T = Ts[j];
+        chk(P.meanOfSpeeds(m, T, n), P.meanOfSpeedsTheory(m, T, n), '⑬速度的平均（闭式）');
+        chk(P.meanOfSpeeds(m, T, n) - P.vAvg(m, 0, n * T), m.a * T / 2, '⑬速度的平均−平均速度=aT/2');
+        chkT(Math.abs(m.a * T / 2) > 1e-6, '⑬两者确实不相等');
+      }
+    }
+
+    /* ⑭ 圆周运动：速率不变、速度矢量在变 */
+    var Rr = 1.5, w = 2.0;
+    for (k = 0; k < 8; k++) {
+      var t0 = k * 0.13, vv = P.circleV(Rr, w, t0);
+      chk(Math.hypot(vv.x, vv.y), Rr * w, '⑭速率恒定');
+      chkT(P.dvMag(Rr, w, t0, t0 + 0.2) > 1e-6, '⑭速率不变而速度变了');
+    }
+    chk(P.dvMag(Rr, w, 0, 2 * Math.PI / w), 0, '⑭跑满一圈速度回到原值', 1e-9);
+
+    /* ⑮ v–t 图线在横轴下方 ≠ 减速：v<0 表示反向，|v| 可以同时在变大 */
+    chkT(P.mythV(0.8) < 0, '⑮后半段 v<0（反向）');
+    chkT(Math.abs(P.mythV(0.8)) > Math.abs(P.mythV(0.55)), '⑮反向的同时 |v| 在变大（在加速）');
+    chk(P.mythV(0.5), 0, '⑮t=0.5 s 时 v=0');
+
+    /* ⑯ 误差预算：模型偏差单调增、测量误差单调减、总误差在内部取极小 */
+    var bv0 = 0.41, ba = 0.19, dd = 0.0005, dtm = 0.0005;
+    var grid = [], d;
+    for (d = 0.004; d <= 0.3001; d += 0.002) { grid.push(d); }
+    var monoB = true, monoM = true;
+    for (i = 1; i < grid.length; i++) {
+      if (!(P.plateBias(grid[i], bv0, ba) > P.plateBias(grid[i - 1], bv0, ba))) { monoB = false; }
+      if (!(P.plateMeasErr(grid[i], bv0, ba, dd, dtm) < P.plateMeasErr(grid[i - 1], bv0, ba, dd, dtm))) { monoM = false; }
+    }
+    chkT(monoB, '⑯模型偏差随 d 单调增');
+    chkT(monoM, '⑯测量误差随 d 单调减');
+    var dStar = P.bestWidth(bv0, ba, dd, dtm, 0.004, 0.30);
+    chkT(dStar > 0.008 && dStar < 0.20, '⑯最优宽度是内点（' + dStar.toFixed(4) + ' m）');
+    chkT(P.plateTotalErr(dStar, bv0, ba, dd, dtm) < P.plateTotalErr(0.004, bv0, ba, dd, dtm), '⑯最优处优于最小值端');
+    chkT(P.plateTotalErr(dStar, bv0, ba, dd, dtm) < P.plateTotalErr(0.300, bv0, ba, dd, dtm), '⑯最优处优于最大值端');
+    chkT(dStar > 0.02, '⑯"越小越准"不成立：最优宽度不是最小宽度');
+
+    return {
+      pass: bad.length === 0, cases: cases, maxErr: worst,
+      failed: bad.slice(0, 6), groups: 16
+    };
+  };
+
+  /* ==========================================================
+     九、本课物理专项（供验收第 2 条单独调用）
+     ========================================================== */
+  P.verifySpeed = function () {
+    var cases = 0, worst = 0, bad = [];
+    var A = P.TAPE_A, i, dt;
+    function chk(a, b, tag, tol) {
+      cases++;
+      var e = Math.abs(a - b);
+      if (e > worst) { worst = e; }
+      if (e > (tol === undefined ? 1e-9 : tol)) { bad.push(tag + ' err=' + e.toExponential(2)); }
+    }
+    /* 教材图 1.3-2 的 DG 段（0.10 s，关于 E 对称）与图 1.3-3 的 DF 段（0.06 s）
+       —— 教材原文："D、F 两点离 E 点越近，算出的平均速度越接近 E 点的瞬时速度" */
+    var tE = 0.30;
+    chk(P.vAvg(A, tE - 0.05, tE + 0.05), P.vOf(A, tE), 'DG(0.10 s)');
+    chk(P.vAvg(A, tE - 0.03, tE + 0.03), P.vOf(A, tE), 'DF(0.06 s)');
+    for (i = 1; i <= 40; i++) {
+      dt = i * 0.005;
+      if (tE - dt / 2 < 0) { break; }
+      chk(P.vAvg(A, tE - dt / 2, tE + dt / 2), P.vOf(A, tE), '两端一起收拢 Δt=' + dt.toFixed(3));
+    }
+    /* 只收一端（教材外常见误用）：误差停在 a·(D−E)，Δ t→0 也不归零 */
+    var tail = [];
+    for (i = 1; i <= 6; i++) { tail.push(P.vAvgErr(A, 0, 0.02 * i, tE)); }
+    chk(tail[5], A.a * (0.06 - tE), '只收一端：误差=a·(t中点−tE)');
+    var lastErr = tail[5], firstErr = tail[0];
+    if (!(Math.abs(lastErr) < Math.abs(firstErr))) { bad.push('只收一端时误差未减小'); }
+    cases++;
+    /* 纸带上"每 5 个点取计数点"：0.1 s 的相邻段平均速度 = 该段中间时刻的瞬时速度 */
+    for (i = 0; i < 6; i++) {
+      chk(P.vAvg(A, 0.1 * i, 0.1 * (i + 1)), P.vOf(A, 0.1 * i + 0.05), '计数点 ' + i + '–' + (i + 1));
+    }
+    /* 三种 Δt 选法求 D 点（t=0.30 s）瞬时速度：CE 居中 ⇒ 精确 */
+    var vBD = P.vAvg(A, 0.30 - 0.06, 0.30), vCE = P.vAvg(A, 0.30 - 0.03, 0.30 + 0.03), vDF = P.vAvg(A, 0.30, 0.30 + 0.06);
+    chk(vCE, P.vOf(A, 0.30), 'CE（含 D 且居中）');
+    chk(vBD, P.vOf(A, 0.30) - A.a * 0.03, 'BD 偏低 a·Δt/2');
+    chk(vDF, P.vOf(A, 0.30) + A.a * 0.03, 'DF 偏高 a·Δt/2');
+    chk(vDF - vBD, A.a * 0.06, 'BD 与 DF 的差 = a·Δt');
+    return { ok: bad.length === 0, cases: cases, maxErr: worst, failed: bad.slice(0, 4) };
+  };
+
+  window.VizPhys = P;
+})();
+
+/* =====================================================================
+   viz_sp_render.js —— 1.3《位置变化快慢的描述——速度》渲染内核
+   只读状态、只画图；物理一律来自 window.VizPhys（纯函数）。
+   色卡：Manim 官方常量，一屏同屏彩色 ≤ 3
+     红 RED   = 位移 Δx       蓝 BLUE  = 时间 Δt      黄 YELLOW = 速度 v（主角量）
+     绿 GREEN = 路程 / 对照    紫 PURPLE = 辅助构造     灰 GREY = 网格 / 辅助
+     白 WHITE = 几何实体（轴、纸带、物体）  青 TEAL = 当前被拖动的对象
+   ===================================================================== */
+(function () {
+  'use strict';
+  var P = window.VizPhys;
+  var R = {};
+  var FONT = '"Microsoft YaHei","PingFang SC","Noto Sans SC","WenQuanYi Zen Hei",sans-serif';
+
+  R.THEME = {
+    black: '#000000', white: '#FFFFFF', grey: '#888888',
+    red: '#FC6255', blue: '#58C4DD', yellow: '#FFFF00', gold: '#F0AC5F',
+    green: '#83C167', purple: '#9A72AC', teal: '#5CD0B3'
+  };
+  var T = R.THEME;
+  /** 窄屏（断点 760px）：画布内标注精简、版面重排，不许叠字、不许出画 */
+  function N(W) { return W < 760; }
+
+  /* ================= 基础画笔 ================= */
+  function txt(ctx, x, y, s, c, size, align, weight, base) {
+    ctx.save();
+    ctx.font = (weight || 400) + ' ' + (size || 12.5) + 'px ' + FONT;
+    ctx.fillStyle = c || T.white;
+    ctx.textAlign = align || 'left';
+    ctx.textBaseline = base || 'middle';
+    ctx.fillText(s, x, y);
+    ctx.restore();
+  }
+  function line(ctx, x1, y1, x2, y2, c, w, dash) {
+    ctx.save();
+    ctx.strokeStyle = c; ctx.lineWidth = w || 1.4; ctx.setLineDash(dash || []);
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    ctx.restore();
+  }
+  function poly(ctx, pts, c, w, dash, close) {
+    if (!pts || pts.length < 2) { return; }
+    ctx.save();
+    ctx.strokeStyle = c; ctx.lineWidth = w || 2.2; ctx.setLineDash(dash || []);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+    for (var i = 1; i < pts.length; i++) { ctx.lineTo(pts[i][0], pts[i][1]); }
+    if (close) { ctx.closePath(); }
+    ctx.stroke(); ctx.restore();
+  }
+  function arrow(ctx, x1, y1, x2, y2, c, w, head, dash) {
+    var a = Math.atan2(y2 - y1, x2 - x1), h = head || 9, L = Math.hypot(x2 - x1, y2 - y1);
+    if (L < 0.5) { return; }
+    h = Math.min(h, L * 0.55);
+    line(ctx, x1, y1, x2 - Math.cos(a) * h * 0.85, y2 - Math.sin(a) * h * 0.85, c, w, dash);
+    ctx.save();
+    ctx.fillStyle = c; ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - Math.cos(a - 0.42) * h, y2 - Math.sin(a - 0.42) * h);
+    ctx.lineTo(x2 - Math.cos(a + 0.42) * h, y2 - Math.sin(a + 0.42) * h);
+    ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+  function dot(ctx, x, y, r, c, fill) {
+    ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832);
+    if (fill === false) { ctx.strokeStyle = c; ctx.lineWidth = 1.8; ctx.stroke(); }
+    else { ctx.fillStyle = c; ctx.fill(); }
+    ctx.restore();
+  }
+  function glow(ctx, x, y, r, c, blur) {
+    ctx.save(); ctx.shadowColor = c; ctx.shadowBlur = Math.min(blur || 10, 10);
+    ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill(); ctx.restore();
+  }
+  function dashLine(ctx, x1, y1, x2, y2, c, w) { line(ctx, x1, y1, x2, y2, c, w || 1.2, [7, 5]); }
+
+  /* ---- 数据 → 屏幕（等比或独立缩放） ---- */
+  function mkAxis(left, top, right, bottom, d0, d1, r0, r1) {
+    var ax = {
+      left: left, top: top, right: right, bottom: bottom, d0: d0, d1: d1, r0: r0, r1: r1,
+      X: function (v) { return left + (v - d0) / (d1 - d0) * (right - left); },
+      Y: function (v) { return bottom - (v - r0) / (r1 - r0) * (bottom - top); },
+      invX: function (px) { return d0 + (px - left) / (right - left) * (d1 - d0); },
+      invY: function (py) { return r0 + (bottom - py) / (bottom - top) * (r1 - r0); }
+    };
+    return ax;
+  }
+  /** 等比铺满（几何图用：地图、圆） */
+  function fitAxis(box, d0, d1, r0, r1) {
+    var s = Math.min(box.w / (d1 - d0), box.h / (r1 - r0));
+    var w = (d1 - d0) * s, h = (r1 - r0) * s;
+    var left = box.x + (box.w - w) / 2, top = box.y + (box.h - h) / 2;
+    return mkAxis(left, top, left + w, top + h, d0, d1, r0, r1);
+  }
+  /** 网格（浅灰 alpha .15）+ 轴（白 1.4） */
+  function gridAxes(ctx, ax, stepX, stepY, labX, labY, opt) {
+    opt = opt || {};
+    var v;
+    ctx.save();
+    for (v = Math.ceil(ax.d0 / stepX) * stepX; v <= ax.d1 + 1e-9; v += stepX) {
+      line(ctx, ax.X(v), ax.top, ax.X(v), ax.bottom, 'rgba(255,255,255,0.14)', 1);
+    }
+    for (v = Math.ceil(ax.r0 / stepY) * stepY; v <= ax.r1 + 1e-9; v += stepY) {
+      line(ctx, ax.left, ax.Y(v), ax.right, ax.Y(v), 'rgba(255,255,255,0.14)', 1);
+    }
+    ctx.restore();
+    if (opt.noFrame !== true) {
+      line(ctx, ax.left, ax.Y(Math.max(ax.r0, 0)), ax.right, ax.Y(Math.max(ax.r0, 0)), 'rgba(255,255,255,0.75)', 1.4);
+      line(ctx, ax.X(Math.min(Math.max(ax.d0, 0), ax.d1)), ax.top, ax.X(Math.min(Math.max(ax.d0, 0), ax.d1)), ax.bottom, 'rgba(255,255,255,0.75)', 1.4);
+    }
+    if (labX) { txt(ctx, ax.right, ax.Y(Math.max(ax.r0, 0)) + 31, labX, T.grey, 11.5, 'right'); }
+    if (labY) { txt(ctx, ax.left - 6, ax.top + 4, labY, T.grey, 11.5, 'left'); }
+  }
+  function ticksX(ctx, ax, step, fmt, yBase) {
+    var v;
+    for (v = Math.ceil(ax.d0 / step) * step; v <= ax.d1 + 1e-9; v += step) {
+      var x = ax.X(v);
+      line(ctx, x, yBase, x, yBase + 5, '#4a4a4a', 1.2);
+      txt(ctx, x, yBase + 15, fmt(v), T.grey, 11.5, 'center');
+    }
+  }
+  function ticksY(ctx, ax, step, fmt) {
+    var v;
+    for (v = Math.ceil(ax.r0 / step) * step; v <= ax.r1 + 1e-9; v += step) {
+      var y = ax.Y(v);
+      line(ctx, ax.left - 5, y, ax.left, y, '#4a4a4a', 1.2);
+      txt(ctx, ax.left - 8, y, fmt(v), T.grey, 11.5, 'right');
+    }
+  }
+  function f2(v) { return (Math.abs(v) < 5e-4 ? 0 : v).toFixed(1); }
+  function f2s(v) { return (Math.abs(v) < 5e-4 ? 0 : v).toFixed(2); }
+
+  /* ---- 上标公式小工具：把 Δx/Δt 画成分数 ---- */
+  function frac(ctx, x, y, num, den, c, size) {
+    txt(ctx, x, y - size * 0.62, num, c, size, 'center');
+    line(ctx, x - size * 0.85, y, x + size * 0.85, y, c, 1.4);
+    txt(ctx, x, y + size * 0.72, den, c, size, 'center');
+  }
+
+  /* =====================================================================
+     场景 1：map —— 顶视地图（反例一：同一终点的两条路；反例二：一东一南）
+     ===================================================================== */
+  function sceneMap(ctx, W, H, st, S) {
+    var nar = N(W), o = st.opts || {};
+    var box = { x: nar ? 34 : 46, y: nar ? 64 : 16, w: W - (nar ? 62 : 76), h: H - (nar ? 100 : 58) };
+    if (o.mode === 'dir') {
+      var ad = fitAxis(box, -4, 25, -25, 4);
+      gridAxes(ctx, ad, 5, 5, 'x / m', 'y / m');
+      var t = st.t || 0;
+      var pe = { x: 20 * t, y: 0 }, pss = { x: 0, y: -20 * t };
+      arrow(ctx, ad.X(0), ad.Y(0), ad.X(20), ad.Y(0), T.red, 2.4, 10);
+      arrow(ctx, ad.X(0), ad.Y(0), ad.X(0), ad.Y(-20), T.red, 2.4, 10);
+      txt(ctx, ad.X(10), ad.Y(0) - 14, '位移 20 m（东）', T.red, 12.5, 'center', 600);
+      txt(ctx, ad.X(0) + 10, ad.Y(-10), '位移 20 m（南）', T.red, 12.5, 'left', 600);
+      dot(ctx, ad.X(pe.x), ad.Y(pe.y), 6, T.white);
+      dot(ctx, ad.X(pss.x), ad.Y(pss.y), 6, T.white);
+      arrow(ctx, ad.X(pe.x), ad.Y(pe.y), ad.X(pe.x), ad.Y(pe.y - 3.2), T.yellow, 2.6, 8);
+      txt(ctx, ad.X(pe.x), ad.Y(pe.y) + 18, '车 A：20 m/s', T.yellow, 12.5, 'center', 600);
+      arrow(ctx, ad.X(pss.x), ad.Y(pss.y) - 4, ad.X(pss.x + 3.2), ad.Y(pss.y) - 4, T.yellow, 2.6, 8);
+      txt(ctx, ad.X(pss.x) + 6, ad.Y(pss.y) - 4, '车 B：20 m/s', T.yellow, 12.5, 'left', 600);
+      txt(ctx, nar ? 12 : ad.left, nar ? 20 : ad.top - 2, '路程 ÷ 时间：两车都是 20 m/s', T.grey, nar ? 11.5 : 12.5, 'left');
+      txt(ctx, nar ? 12 : ad.left, nar ? 40 : ad.top + 18, '位移 ÷ 时间：一东一南，是两个速度', T.yellow, nar ? 11.5 : 12.5, 'left', 600);
+      return;
+    }
+    /* 反例一：同一地点出发、同时到达同一终点，一条绕远、一条走近路 */
+    var a = fitAxis(box, -1.4, 7.6, -1.4, 5.6);
+    gridAxes(ctx, a, 1, 1, 'x / m', 'y / m');
+    var pfar = P.PATH_FAR.map(function (p) { return [a.X(p[0]), a.Y(p[1])]; });
+    var pnear = P.PATH_NEAR.map(function (p) { return [a.X(p[0]), a.Y(p[1])]; });
+    poly(ctx, pfar, T.green, 2.4);
+    poly(ctx, pnear, T.purple, 2.4);
+    arrow(ctx, a.X(0), a.Y(0), a.X(6), a.Y(2), T.red, 3, 11);
+    dot(ctx, a.X(0) + a.Y(0) * 0, a.Y(0), 5, T.white);
+    dot(ctx, a.X(6), a.Y(2), 5, T.white);
+    txt(ctx, a.X(0) - 8, a.Y(0) + 16, '起点', T.white, 12, 'right');
+    txt(ctx, a.X(6) + 8, a.Y(2) + 16, '终点', T.white, 12, 'left');
+    txt(ctx, a.X(3.2), a.Y(1.0) - 12, '位移（红）', T.red, 12.5, 'center', 600);
+    if (!nar) { txt(ctx, a.X(0) + 8, a.Y(4), '绕远的路（绿）', T.green, 12.5, 'left', 600); }
+    txt(ctx, a.X(3.6), a.Y(2) + 18, '走近路（紫）', T.purple, 12.5, 'center', 600);
+    var s = (st.t === undefined) ? 1 : st.t;
+    var q1 = P.pointOn(P.PATH_FAR, s), q2 = P.pointOn(P.PATH_NEAR, s);
+    dot(ctx, a.X(q1.x), a.Y(q1.y), 6, T.white);
+    dot(ctx, a.X(q2.x), a.Y(q2.y), 6, T.white);
+    txt(ctx, nar ? 12 : a.left, nar ? 20 : a.top - 2, '两车同时出发、同时到达同一个终点', T.white, nar ? 11.5 : 12.5, 'left');
+    txt(ctx, nar ? 12 : a.left, nar ? 40 : a.top + 18, '路程 12.0 / 6.3 m　位移都是 6.3 m', T.grey, nar ? 11.5 : 12.5, 'left');
+  }
+
+  /* =====================================================================
+     场景 2：axis —— 位置轴 + 时间轴（比值定义 / 命名 / 平均速度）
+     ===================================================================== */
+  function motionOf(o) {
+    if (o.motion === 'uniform') { return { x0: 0, v0: 2.0, a: 0, T: 3.0 }; }
+    return P.TAPE_A;
+  }
+  function sceneAxis(ctx, W, H, st, S) {
+    var o = st.opts || {}, m = motionOf(o);
+    var hMain = H * 0.52, hStrip = H * 0.24;
+    var top = { x: 62, y: 34, w: W - 108, h: hMain - 34 };
+    var bot = { x: 62, y: hMain + 34, w: W - 108, h: hStrip - 30 };
+    var aX = mkAxis(top.x, top.y, top.x + top.w, top.y + top.h, m.x0, P.xOf(m, m.T), -0.6, 0.6);
+    var aT = mkAxis(bot.x, bot.y, bot.x + bot.w, bot.y + bot.h, 0, m.T, -1, 1);
+
+    /* --- 主视图：位置轴 --- */
+    line(ctx, aX.left, aX.Y(0), aX.right, aX.Y(0), 'rgba(255,255,255,0.8)', 1.4);
+    var xt, n = 6, i;
+    for (xt = 0; xt <= m.T + 1e-9; xt += m.T / n) {
+      var px = aX.X(P.xOf(m, xt));
+      line(ctx, px, aX.Y(0) - 5, px, aX.Y(0) + 5, '#4a4a4a', 1.2);
+      txt(ctx, px, aX.Y(0) + 17, f2s(P.xOf(m, xt)), T.grey, 11.5, 'center');
+    }
+    txt(ctx, aX.right, aX.Y(0) + 34, 'x / m', T.grey, 11.5, 'right');
+    txt(ctx, aX.left, aX.Y(0) - 26, o.motion === 'uniform' ? '匀速直线运动' : '手拉纸带（变速）', T.grey, 12, 'left');
+
+    var tA = st.tA, tB = st.tB;
+    var xA = P.xOf(m, tA), xB = P.xOf(m, tB);
+    line(ctx, aT.X(tA), aX.Y(0) + 6, aT.X(tA), bot.y - 2, 'rgba(136,136,136,0.5)', 1, [4, 4]);
+    line(ctx, aT.X(tB), aX.Y(0) + 6, aT.X(tB), bot.y - 2, 'rgba(136,136,136,0.5)', 1, [4, 4]);
+    /* 位移 Δx（红）：位置轴上的有向线段 */
+    arrow(ctx, aX.X(xA), aX.Y(0), aX.X(xB), aX.Y(0), T.red, 3.2, 11);
+    dot(ctx, aX.X(xA), aX.Y(0), 6, T.white);
+    dot(ctx, aX.X(xB), aX.Y(0), 6, T.white);
+    txt(ctx, aX.X(xA), aX.Y(0) - 18, 'A', T.white, 13, 'center', 700);
+    txt(ctx, aX.X(xB), aX.Y(0) - 18, 'B', T.white, 13, 'center', 700);
+    txt(ctx, (aX.X(xA) + aX.X(xB)) / 2, aX.Y(0) + 30, 'Δx = ' + (xB - xA).toFixed(3) + ' m', T.red, 12.5, 'center', 600);
+    /* 物体（当前时刻 tB 的位置） */
+    glow(ctx, aX.X(xB), aX.Y(0), 5, T.yellow, 9);
+
+    /* --- 时间轴 --- */
+    line(ctx, aT.left, aT.Y(0), aT.right, aT.Y(0), 'rgba(255,255,255,0.8)', 1.4);
+    var barY = aT.Y(0) - 20;
+    ctx.save();
+    ctx.fillStyle = 'rgba(88,196,221,0.25)';
+    ctx.fillRect(aT.X(tA), barY - 7, aT.X(tB) - aT.X(tA), 14);
+    ctx.restore();
+    line(ctx, aT.X(tA), barY, aT.X(tB), barY, T.blue, 2.4);
+    txt(ctx, (aT.X(tA) + aT.X(tB)) / 2, barY - 16, 'Δt = ' + (tB - tA).toFixed(3) + ' s', T.blue, 12.5, 'center', 600);
+    ticksX(ctx, aT, m.T / 6, function (v) { return v.toFixed(2); }, aT.Y(0));
+    txt(ctx, aT.right, aT.Y(0) + 34, 't / s', T.grey, 11.5, 'right');
+    /* 手柄 */
+    var hY = aT.Y(0);
+    dot(ctx, aT.X(tA), hY, 7, T.teal); dot(ctx, aT.X(tB), hY, 7, T.teal);
+    txt(ctx, aT.X(tA), hY + 19, 'A', T.white, 12, 'center', 700);
+    txt(ctx, aT.X(tB), hY + 19, 'B', T.white, 12, 'center', 700);
+    S.hits.push({ key: 'A', x: aT.X(tA), y: hY, r: 24 });
+    S.hits.push({ key: 'B', x: aT.X(tB), y: hY, r: 24 });
+    S.grab.A = function (px) { st.tA = Math.max(0, Math.min(st.tB - 0.02, aT.invX(px))); };
+    S.grab.B = function (px) { st.tB = Math.min(m.T, Math.max(st.tA + 0.02, aT.invX(px))); };
+
+    /* --- 比值定义：三个数一起看 --- */
+    if (o.mode === 'ratio' && !N(W)) {
+      var v = (xB - xA) / (tB - tA);
+      var bx = W - 268, by = 34;
+      txt(ctx, bx, by, '同一次运动，三种算法：', T.white, 12.5, 'left', 600);
+      txt(ctx, bx, by + 24, '只看位移 Δx = ' + (xB - xA).toFixed(3) + ' m　（拖动就变）', T.red, 12.5, 'left');
+      txt(ctx, bx, by + 46, '只看时间 Δt = ' + (tB - tA).toFixed(3) + ' s　（拖动就变）', T.blue, 12.5, 'left');
+      txt(ctx, bx, by + 68, '位移 ÷ 时间 = ' + v.toFixed(2) + ' m/s　（不变）', T.yellow, 13, 'left', 700);
+      frac(ctx, bx + 150, by + 108, 'Δx', 'Δt', T.yellow, 13);
+      txt(ctx, bx + 176, by + 100, '= v', T.yellow, 15, 'left', 700);
+    }
+    if (o.mode === 'define' && !N(W)) {
+      var v2 = (xB - xA) / (tB - tA);
+      txt(ctx, W - 300, 34, '速度  v = Δx / Δt', T.yellow, 18, 'left', 700);
+      txt(ctx, W - 300, 60, '=' + v2.toFixed(2) + ' m/s　方向与 Δx 相同', T.yellow, 12.5, 'left');
+      txt(ctx, W - 300, 82, '国际单位：米每秒（m/s）', T.grey, 12.5, 'left');
+      txt(ctx, W - 300, 104, '矢量：既有大小，又有方向', T.white, 12.5, 'left');
+      arrow(ctx, aX.X(xA), aX.Y(0) - 40, aX.X(xB), aX.Y(0) - 40, T.yellow, 2.6, 10);
+      txt(ctx, (aX.X(xA) + aX.X(xB)) / 2, aX.Y(0) - 54, 'v 的方向', T.yellow, 12.5, 'center', 600);
+    }
+    if (o.mode === 'avg' && !N(W)) {
+      var v3 = (xB - xA) / (tB - tA);
+      txt(ctx, W - 300, 34, '平均速度（一段）', T.yellow, 15, 'left', 700);
+      txt(ctx, W - 300, 58, 'v̄ = Δx / Δt = ' + v3.toFixed(3) + ' m/s', T.yellow, 13, 'left');
+      txt(ctx, W - 300, 80, '教材图 1.3-2：D、G 两点间 0.1 s', T.grey, 12, 'left');
+    }
+  }
+
+  /* =====================================================================
+     场景 3：tape —— 纸带（实验四步 / 平均速度不是速度的平均 / 选带）
+     ===================================================================== */
+  function drawTapeStrip(ctx, x0, y0, w, m, opt) {
+    /* 纸带本体：一条白线 + 点（每 dtRaw 一个），计数点加粗 */
+    opt = opt || {};
+    var per = opt.per || 5, tEnd = opt.tEnd || m.T;
+    var xf = function (t) { return x0 + P.xOf(m, t) / P.xOf(m, tEnd) * w; };
+    line(ctx, x0, y0, x0 + w, y0, T.white, 4.5);
+    var k = 0, t = 0, i = 0;
+    for (t = 0; t <= tEnd + 1e-9; t += m.dtRaw) {
+      var isC = (i % per === 0);
+      dot(ctx, xf(t), y0, isC ? 3.4 : 2.1, isC ? T.white : T.grey, true);
+      if (isC && opt.labels !== false) {
+        txt(ctx, xf(t), y0 - 16, String(k), T.white, 12, 'center', 600);
+        k++;
+      }
+      i++;
+    }
+    return xf;
+  }
+  function sceneTape(ctx, W, H, st, S) {
+    var nar = N(W), o = st.opts || {}, m = P.TAPE_A, per = 5;
+    var y0 = H * 0.40, x0 = nar ? 44 : 70, w = W - (nar ? 92 : 150);
+
+    if (o.mode === 'pick') {
+      /* 三条候选纸带：50 cm 内点数的硬标准（[外02]·P28：35~40 个点） */
+      var cands = [
+        { n: 38, ok: true,  name: '甲', note: '50 cm 内 38 个点，点迹清晰' },
+        { n: 12, ok: false, name: '乙', note: '50 cm 内只有 12 个点，点迹又糊又断' },
+        { n: 62, ok: false, name: '丙', note: '50 cm 内 62 个点，挤成一团' }
+      ];
+      for (var c = 0; c < 3; c++) {
+        var yy = 104 + c * (H - 170) / 3, cc = cands[c];
+        var on = (st.pick === c);
+        line(ctx, x0, yy, x0 + w, yy, on ? 'rgba(255,255,0,0.55)' : 'rgba(136,136,136,0.75)', 6);
+        for (var q = 0; q <= cc.n; q++) {
+          var px = x0 + q / cc.n * w;
+          dot(ctx, px, yy, 3.3, on ? T.yellow : T.white, true);
+        }
+        txt(ctx, x0 - 14, yy, cc.name, on ? T.yellow : T.white, 15, 'right', 700);
+        txt(ctx, x0, yy + 20, cc.note, on ? T.yellow : T.grey, 12, 'left', on ? 600 : 400);
+        S.hits.push({ key: 'pick', x: x0 + w / 2, y: yy, r: 30, val: c });
+      }
+      txt(ctx, x0, 40, nar ? '标准：50 cm 内清楚地记录 35~40 个点' : '标准：纸带上长约 50 cm 的范围内，清楚地记录 35~40 个点', T.white, nar ? 12 : 13, 'left', 600);
+      if (!nar) { txt(ctx, x0, 62, '"完成实验操作，会选择点迹清晰的纸带" —— 最容易被忽略的一条实验能力', T.grey, 12, 'left'); }
+      return;
+    }
+
+    var xf = drawTapeStrip(ctx, x0, y0, w, m, { per: per, labels: true });
+    txt(ctx, x0, 40, nar ? '每 5 个点取一个计数点 → 0.1 s' :
+      ((o.mode === 'avgmean') ? '同一条纸带，相邻计数点间 0.1 s' : '打点计时器每 0.02 s 打一个点；每 5 个点取一个计数点 → 0.1 s'),
+      T.white, nar ? 12 : 13, 'left', 600);
+    if (!nar) { txt(ctx, x0, 62, '测量的是"各计数点到起始点 0 的距离 x"，不是"相邻两点间的距离"', T.grey, 12, 'left'); }
+
+    /* 到 0 的距离标注 */
+    var sy = y0 + 62;
+    for (var i = 0; i <= 6; i++) {
+      var t = 0.1 * i, px = xf(t);
+      line(ctx, px, y0 + 12, px, sy, 'rgba(255,255,255,0.35)', 1, [4, 4]);
+      if (!nar || i % 2 === 0) { txt(ctx, px, sy + 15, P.xOf(m, t).toFixed(3), T.grey, 11.5, 'center'); }
+    }
+    txt(ctx, x0 - 12, sy + 15, 'x /m', T.grey, 11.5, 'right');
+
+    /* 选中的一段 */
+    var seg = st.seg || 0;
+    var i1 = Math.max(0, Math.min(5, seg)), t1 = 0.1 * i1, t2 = t1 + 0.1;
+    var xa = xf(t1), xb = xf(t2);
+    arrow(ctx, xa, y0 - 40, xb, y0 - 40, T.red, 2.6, 9);
+    txt(ctx, (xa + xb) / 2, y0 - 54, 'Δx = ' + (P.xOf(m, t2) - P.xOf(m, t1)).toFixed(3) + ' m', T.red, 12.5, 'center', 600);
+    line(ctx, xa, y0 - 34, xa, y0 + 10, 'rgba(88,196,221,0.7)', 1.6, [6, 4]);
+    line(ctx, xb, y0 - 34, xb, y0 + 10, 'rgba(88,196,221,0.7)', 1.6, [6, 4]);
+    txt(ctx, (xa + xb) / 2, y0 + 22, 'Δt = 0.100 s', T.blue, 12.5, 'center', 600);
+
+    if (o.mode === 'avgmean') {
+      /* 迷思：把三段的速度加起来除以 3 ？
+         事实：v̄ = 总位移 ÷ 总时间 */
+      var v1 = P.vAvg(m, 0, 0.1), v2 = P.vAvg(m, 0.1, 0.2), v3 = P.vAvg(m, 0.2, 0.3);
+      var meanOf = (v1 + v2 + v3) / 3, real = P.vAvg(m, 0, 0.3);
+      var byy = H - 96;
+      line(ctx, x0, byy - 26, x0 + w, byy - 26, 'rgba(255,255,255,0.18)', 1);
+      var ox = nar ? 0 : 210, oy = nar ? 18 : 26, fs = nar ? 11.5 : 12.5;
+      txt(ctx, x0, byy, '三段速度相加 ÷ 3：', T.grey, fs, 'left');
+      txt(ctx, x0 + ox, byy + (nar ? 18 : 0), '(' + v1.toFixed(2) + ' + ' + v2.toFixed(2) + ' + ' + v3.toFixed(2) + ') ÷ 3 = ' + meanOf.toFixed(3) + ' m/s', T.red, fs, 'left', 600);
+      txt(ctx, x0, byy + 2 * oy, '总位移 ÷ 总时间：', T.grey, fs, 'left');
+      txt(ctx, x0 + ox, byy + 3 * oy, '0.108 ÷ 0.300 = ' + real.toFixed(3) + ' m/s', T.yellow, fs, 'left', 700);
+      txt(ctx, x0, byy + 4 * oy, nar ? '两个数不一样：平均速度 = 总位移 ÷ 总时间' : '两个数不一样 —— 教材说的平均速度，永远是"总位移 ÷ 总时间"', T.white, fs, 'left');
+    }
+    S.hits.push({ key: 'seg0', x: xf(0.05), y: y0, r: 12, val: 0 });
+    for (i = 0; i <= 5; i++) {
+      (function (idx) {
+        S.hits.push({ key: 'seg', x: xf(0.1 * idx + 0.05), y: y0, r: 15, val: idx });
+      })(i);
+    }
+    S.grab.seg = function (px) {
+      var tt = x0 === 0 ? 0 : 0;
+      /* 由像素反算时间：x 与 t 单调，二分 40 次足够 */
+      var lo = 0, hi = 0.6, mid, g;
+      for (g = 0; g < 40; g++) { mid = (lo + hi) / 2; if (xf(mid) < px) { lo = mid; } else { hi = mid; } }
+      st.seg = Math.max(0, Math.min(5, Math.floor(((lo + hi) / 2) / 0.1)));
+    };
+  }
+
+  /* =====================================================================
+     场景 4：zoom —— E 点附近（"0 ÷ 0" 与 两端收拢的极限）
+     ===================================================================== */
+  function sceneZoom(ctx, W, H, st, S) {
+    var nar = N(W), o = st.opts || {}, m = P.TAPE_A, tE = 0.30;
+    var x0 = nar ? 40 : 70, w = W - (nar ? 80 : 150), y0 = nar ? H * 0.22 : H * 0.26;
+    var tEnd = 0.60;
+    var xf = function (t) { return x0 + P.xOf(m, t) / P.xOf(m, tEnd) * w; };
+
+    if (o.mode === 'zero') {
+      line(ctx, x0, y0, x0 + w, y0, T.white, 4.5);
+      var i, t;
+      for (i = 0; i <= 30; i++) {
+        t = i * 0.02;
+        var isC = (i % 5 === 0);
+        dot(ctx, xf(t), y0, isC ? 3.4 : 2.1, isC ? T.white : T.grey, true);
+        if (isC) { txt(ctx, xf(t), y0 - 16, String(i / 5), T.white, 12, 'center', 600); }
+      }
+      var te = (st.tE === undefined) ? tE : st.tE;
+      dot(ctx, xf(te), y0, 7, T.yellow);
+      glow(ctx, xf(te), y0, 7, T.yellow, 10);
+      txt(ctx, xf(te), y0 + 22, 'E', T.yellow, 15, 'center', 700);
+      S.hits.push({ key: 'E', x: xf(te), y: y0, r: 24 });
+      S.grab.E = function (px) {
+        var lo = 0, hi = 0.6, mid, g;
+        for (g = 0; g < 40; g++) { mid = (lo + hi) / 2; if (xf(mid) < px) { lo = mid; } else { hi = mid; } }
+        st.tE = Math.max(0, Math.min(0.6, (lo + hi) / 2));
+      };
+      txt(ctx, x0, 40, '把 E 拖到纸带上的任何位置，再问一次：它上面的 Δx 和 Δt 是多少？', T.white, 13, 'left', 600);
+      var bx = x0, by = H - 110;
+      txt(ctx, bx, by, 'E 点上：位移 Δx 是多少？', T.white, 15, 'left', 600);
+      txt(ctx, bx, by + 30, '时间是 Δt 是多少？', T.white, 15, 'left', 600);
+      txt(ctx, bx + 330, by, '0', T.red, 18, 'left', 700);
+      txt(ctx, bx + 330, by + 30, '0', T.blue, 18, 'left', 700);
+      txt(ctx, bx, by - 26, 'E 点在 t = ' + te.toFixed(2) + ' s', T.grey, 12.5, 'left');
+      txt(ctx, bx, by + 62, '0 ÷ 0 算不出来。', T.yellow, 15, 'left', 700);
+      txt(ctx, bx, by + 88, '错在把物体固定在了 E 这一个点上，而不是在运动中经过 E 点。', T.white, 12.5, 'left');
+      txt(ctx, bx, by + 110, '这两件事完全不一样 —— 位移和时间都是"经过"出来的。', T.grey, 12.5, 'left');
+      return;
+    }
+
+    /* limit 模式：两端向 E 收拢 */
+    line(ctx, x0, y0, x0 + w, y0, T.white, 4.5);
+    var j, tt;
+    for (j = 0; j <= 30; j++) {
+      tt = j * 0.02;
+      dot(ctx, xf(tt), y0, 2.1, T.grey, true);
+    }
+    var t1 = st.t1, t2 = st.t2;
+    var x1 = P.xOf(m, t1), x2 = P.xOf(m, t2);
+    /* Δx 线段（红）画在纸带上方 */
+    arrow(ctx, xf(t1), y0 - 46, xf(t2), y0 - 46, T.red, 3, 10);
+    line(ctx, xf(t1), y0 - 40, xf(t1), y0 + 8, 'rgba(252,98,85,0.6)', 1.4, [6, 4]);
+    line(ctx, xf(t2), y0 - 40, xf(t2), y0 + 8, 'rgba(252,98,85,0.6)', 1.4, [6, 4]);
+    txt(ctx, (xf(t1) + xf(t2)) / 2, y0 - 62, 'Δx = ' + (x2 - x1).toFixed(4) + ' m', T.red, 12.5, 'center', 600);
+    /* Δt 条（蓝）画在纸带下方 */
+    ctx.save(); ctx.fillStyle = 'rgba(88,196,221,0.22)';
+    ctx.fillRect(xf(t1), y0 + 26, xf(t2) - xf(t1), 13); ctx.restore();
+    line(ctx, xf(t1), y0 + 32, xf(t2), y0 + 32, T.blue, 2.4);
+    txt(ctx, (xf(t1) + xf(t2)) / 2, y0 + 52, 'Δt = ' + (t2 - t1).toFixed(3) + ' s', T.blue, 12.5, 'center', 600);
+    dot(ctx, xf(tE), y0, 5.5, T.yellow); glow(ctx, xf(tE), y0, 5.5, T.yellow, 10);
+    txt(ctx, xf(tE), y0 - 16, 'E', T.yellow, 14, 'center', 700);
+    dot(ctx, xf(t1), y0, 7, T.teal); dot(ctx, xf(t2), y0, 7, T.teal);
+    S.hits.push({ key: 't1', x: xf(t1), y: y0, r: 24 });
+    S.hits.push({ key: 't2', x: xf(t2), y: y0, r: 24 });
+    S.grab.t1 = function (px) {
+      var lo = 0, hi = 0.6, mid, g;
+      for (g = 0; g < 40; g++) { mid = (lo + hi) / 2; if (xf(mid) < px) { lo = mid; } else { hi = mid; } }
+      st.t1 = Math.max(0, Math.min(st.t2 - 0.02, (lo + hi) / 2));
+    };
+    S.grab.t2 = function (px) {
+      var lo = 0, hi = 0.6, mid, g;
+      for (g = 0; g < 40; g++) { mid = (lo + hi) / 2; if (xf(mid) < px) { lo = mid; } else { hi = mid; } }
+      st.t2 = Math.min(0.6, Math.max(st.t1 + 0.02, (lo + hi) / 2));
+    };
+
+    txt(ctx, x0, y0 + (nar ? 96 : 108), 'Δt 越小，Δx/Δt 越接近 E 点的瞬时速度', T.yellow, nar ? 14 : 18, 'left', 700);
+    if (!nar) { txt(ctx, x0, y0 + 138, '注意是"两端一起向 E 收拢"，不是只把一端缩短 —— 只收一端，收敛到的是那一端。', T.white, 13, 'left'); }
+    /* 右下角小图：v̄ 随 Δt 的变化（黄=两端一起收拢，灰=只收一端） */
+    var gx = nar ? 64 : W - 590, gy = nar ? H - 156 : H - 330, gw = nar ? W - 136 : 440, gh = nar ? 104 : 244;
+    var aG = mkAxis(gx, gy, gx + gw, gy + gh, 0, 0.20, 0.24, 0.66);
+    gridAxes(ctx, aG, 0.05, 0.10, 'Δt / s', 'v̄');
+    var vE = P.vOf(m, tE), pts = [], dt;
+    for (dt = 0.02; dt <= 0.2001; dt += 0.005) {
+      pts.push([aG.X(dt), aG.Y(P.vAvg(m, tE - dt / 2, tE + dt / 2))]);
+    }
+    poly(ctx, pts, T.yellow, 2.6);
+    var pts2 = [];
+    for (dt = 0.02; dt <= 0.2001; dt += 0.005) {
+      pts2.push([aG.X(dt), aG.Y(P.vAvg(m, 0, dt))]);
+    }
+    poly(ctx, pts2, T.grey, 1.6, [7, 5]);
+    dashLine(ctx, aG.left, aG.Y(vE), aG.right, aG.Y(vE), 'rgba(255,255,0,0.35)', 1.2);
+    var cur = P.vAvg(m, t1, t2);
+    dot(ctx, aG.X(t2 - t1) > aG.right ? aG.right : aG.X(t2 - t1), aG.Y(cur), 4.5, T.gold);
+    txt(ctx, gx, gy - 14, '两端一起收拢（黄） vs 只收一端（灰）', T.grey, 12, 'left');
+    txt(ctx, gx + gw, gy + gh + 16, 'v_E = ' + vE.toFixed(3) + ' m/s', T.yellow, 11.5, 'right', 600);
+  }
+
+  /* =====================================================================
+     场景 5：table12 —— 教参表 1-2（真实数据，0.47 → 0.41）
+     ===================================================================== */
+  function sceneTable12(ctx, W, H, st, S) {
+    var nar = N(W);
+    var a = mkAxis(94, 36, W - (nar ? 40 : 250), H - 62, 0, 0.32, 0.38, 0.50);
+    gridAxes(ctx, a, 0.05, 0.02, nar ? 'Δx / m' : 'Δx / m（遮光片宽度）', 'v̄ / (m·s⁻¹)');
+    ticksX(ctx, a, 0.05, f2s, a.Y(0.38));
+    ticksY(ctx, a, 0.02, f2s);
+    var pts = P.TABLE12.map(function (r) { return [a.X(r.d), a.Y(r.v)]; });
+    poly(ctx, pts, 'rgba(255,255,255,0.35)', 1.4);
+    var sel = st.row === undefined ? 5 : st.row, i;
+    for (i = 0; i < P.TABLE12.length; i++) {
+      var r = P.TABLE12[i], on = (i === sel);
+      dot(ctx, a.X(r.d), a.Y(r.v), on ? 6.5 : 4.5, on ? T.yellow : T.white);
+      if (on) { glow(ctx, a.X(r.d), a.Y(r.v), 6.5, T.yellow, 10); }
+      S.hits.push({ key: 'row', x: a.X(r.d), y: a.Y(r.v), r: 20, val: i });
+    }
+    dashLine(ctx, a.left, a.Y(0.41), a.right, a.Y(0.41), 'rgba(255,255,255,0.28)', 1.2);
+    txt(ctx, a.left + 6, a.Y(0.41) - 10, '0.41 m/s', T.white, 12, 'left', 600);
+    txt(ctx, a.left, 16, nar ? '教参表 1-2（真实数据）' : '教参表 1-2：同一滑块从同一高度滑下，只换遮光片宽度', T.white, nar ? 12 : 13, 'left', 600);
+    S.grab.row = function (px) {
+      var d = a.invX(px), best = 0, bd = 1e9;
+      for (var k = 0; k < P.TABLE12.length; k++) {
+        var e = Math.abs(P.TABLE12[k].d - d);
+        if (e < bd) { bd = e; best = k; }
+      }
+      st.row = best;
+    };
+  }
+
+  /* =====================================================================
+     场景 6：err —— 合适 ≠ 最小（两条方向相反的误差曲线）
+     ===================================================================== */
+  function sceneErr(ctx, W, H, st, S) {
+    var o = st.opts || {};
+    var v0 = 0.41, acc = 0.19, dd = 0.0005, dtm = 0.0005;
+    var nar = N(W);
+    var a = mkAxis(94, 36, W - (nar ? 40 : 250), H - 62, 0.004, 0.30, 0, 0.08);
+    gridAxes(ctx, a, 0.05, 0.02, nar ? 'd / m' : 'd / m（遮光片宽度）', '误差 / (m·s⁻¹)');
+    ticksX(ctx, a, 0.05, f2s, a.Y(0));
+    ticksY(ctx, a, 0.02, f2s);
+    var pb = [], pm = [], pt = [], d;
+    for (d = 0.004; d <= 0.3001; d += 0.004) {
+      pb.push([a.X(d), a.Y(P.plateBias(d, v0, acc))]);
+      pm.push([a.X(d), a.Y(P.plateMeasErr(d, v0, acc, dd, dtm))]);
+      pt.push([a.X(d), a.Y(Math.min(0.08, P.plateTotalErr(d, v0, acc, dd, dtm)))]);
+    }
+    poly(ctx, pb, T.red, 2.2);
+    poly(ctx, pm, T.blue, 2.2);
+    poly(ctx, pt, T.yellow, 3);
+    var dStar = P.bestWidth(v0, acc, dd, dtm, 0.004, 0.30);
+    dashLine(ctx, a.X(dStar), a.top, a.X(dStar), a.bottom, 'rgba(255,255,0,0.5)', 1.4);
+    txt(ctx, a.X(dStar) + 6, a.top + 12, '最合适 d ≈ ' + (dStar * 100).toFixed(1) + ' cm', T.yellow, 12, 'left', 700);
+    txt(ctx, a.X(0.185), a.Y(0.072), '模型偏差：用平均速度冒充瞬时速度', T.red, 12, nar ? 'right' : 'left');
+    txt(ctx, a.X(0.16), a.Y(P.plateMeasErr(0.16, v0, acc, dd, dtm)) - 14, '测量误差：Δx、Δt 量不准', T.blue, 12, 'left');
+    txt(ctx, a.X(0.175), a.Y(P.plateTotalErr(0.175, v0, acc, dd, dtm)) + 16, '总误差', T.yellow, 12.5, 'left', 700);
+    txt(ctx, a.left, 16, nar ? '设定：v₀=0.41，a=0.19，δd=δt=0.5 ms（示意）' : '设定：v₀ = 0.41 m/s，a = 0.19 m/s²，δd = 0.5 mm，δt = 0.5 ms（示意模型）', T.grey, nar ? 11 : 12, 'left');
+    var sel = (st.dsel === undefined) ? 0.05 : st.dsel;
+    var px = a.X(sel);
+    line(ctx, px, a.top, px, a.bottom, 'rgba(255,255,255,0.55)', 1.4);
+    line(ctx, a.left, a.Y(P.plateTotalErr(sel, v0, acc, dd, dtm)), a.right, a.Y(P.plateTotalErr(sel, v0, acc, dd, dtm)), 'rgba(255,255,255,0.2)', 1);
+    dot(ctx, px, a.Y(P.plateBias(sel, v0, acc)), 5, T.red);
+    dot(ctx, px, a.Y(P.plateMeasErr(sel, v0, acc, dd, dtm)), 5, T.blue);
+    dot(ctx, px, a.Y(Math.min(0.08, P.plateTotalErr(sel, v0, acc, dd, dtm))), 6.5, T.yellow);
+    glow(ctx, px, a.Y(Math.min(0.08, P.plateTotalErr(sel, v0, acc, dd, dtm))), 6.5, T.yellow, 9);
+    S.hits.push({ key: 'dsel', x: px, y: a.Y(0) - 14, r: 999 });
+    S.grab.dsel = function (ppx) { st.dsel = Math.max(0.004, Math.min(0.30, a.invX(ppx))); };
+  }
+
+  /* =====================================================================
+     场景 7：circle —— 速率 ≠ 速度（匀速圆周运动 + 速度计）
+     ===================================================================== */
+  function sceneCircle(ctx, W, H, st, S) {
+    var nar = N(W), Rr = 1.5, w = 2.0;
+    var box = { x: nar ? 26 : 60, y: nar ? 16 : 24, w: nar ? W - 52 : W * 0.56, h: nar ? H * 0.50 : H - 96 };
+    var a = fitAxis(box, -2, 2, -2, 2);
+    line(ctx, a.X(-2), a.Y(0), a.X(2), a.Y(0), 'rgba(255,255,255,0.25)', 1);
+    line(ctx, a.X(0), a.Y(-2), a.X(0), a.Y(2), 'rgba(255,255,255,0.25)', 1);
+    var pts = [], i;
+    for (i = 0; i <= 72; i++) { pts.push([a.X(Rr * Math.cos(i / 72 * 6.2832)), a.Y(Rr * Math.sin(i / 72 * 6.2832))]); }
+    poly(ctx, pts, T.white, 2.2);
+    var t = st.t || 0;
+    var pp = P.circleP(Rr, w, t), vv = P.circleV(Rr, w, t);
+    dot(ctx, a.X(pp.x), a.Y(pp.y), 6.5, T.yellow); glow(ctx, a.X(pp.x), a.Y(pp.y), 6.5, T.yellow, 10);
+    var sc = 0.55;
+    arrow(ctx, a.X(pp.x), a.Y(pp.y), a.X(pp.x + vv.x * sc), a.Y(pp.y + vv.y * sc), T.yellow, 3, 11);
+    txt(ctx, a.X(pp.x + vv.x * sc) + 8, a.Y(pp.y + vv.y * sc) - 8, 'v', T.yellow, 14, 'left', 700);
+    dashLine(ctx, a.X(0), a.Y(0), a.X(pp.x), a.Y(pp.y), 'rgba(136,136,136,0.6)', 1.2);
+    dot(ctx, a.X(0), a.Y(0), 3.5, T.grey);
+    txt(ctx, a.X(0) + 6, a.Y(0) - 12, 'O', T.grey, 12, 'left');
+
+    /* 速度计（只显示大小，显示不出方向） */
+    var gx = nar ? W / 2 : W * 0.66 + 40, gy = nar ? H * 0.72 : H * 0.52, gr = nar ? Math.min(58, H * 0.13) : Math.min(96, H * 0.20);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(gx, gy, gr, Math.PI * 1.18, Math.PI * 1.82); ctx.stroke();
+    ctx.restore();
+    for (i = 0; i <= 8; i++) {
+      var ang = Math.PI * (1.18 + 0.64 * i / 8);
+      line(ctx, gx + Math.cos(ang) * (gr - 10), gy + Math.sin(ang) * (gr - 10),
+           gx + Math.cos(ang) * gr, gy + Math.sin(ang) * gr, 'rgba(255,255,255,0.45)', 1.2);
+    }
+    var spd = Math.hypot(vv.x, vv.y), f = Math.min(1, spd / 4.0), nang = Math.PI * (1.18 + 0.64 * f);
+    arrow(ctx, gx, gy, gx + Math.cos(nang) * (gr - 16), gy + Math.sin(nang) * (gr - 16), T.yellow, 2.6, 9);
+    dot(ctx, gx, gy, 4, T.white);
+    txt(ctx, gx, gy + gr * 0.30, '速度计', T.white, nar ? 11.5 : 12.5, 'center', 600);
+    txt(ctx, gx, gy + gr * 0.52, '示数 ' + spd.toFixed(2) + ' m/s', T.yellow, nar ? 11.5 : 13, 'center', 700);
+    if (!nar) { txt(ctx, gx, gy + 70, '它显示不出车往哪个方向开', T.grey, 12, 'center'); }
+    txt(ctx, nar ? 20 : 60, H - (nar ? 40 : 46), '速率 = 瞬时速度的大小：' + spd.toFixed(2) + ' m/s（恒定）', T.yellow, nar ? 11.5 : 13, 'left', 700);
+    txt(ctx, nar ? 20 : 60, H - (nar ? 20 : 24), nar ? '速度方向沿切线、时刻在变，所以不是"匀速运动"' : '速度是矢量：方向沿圆的切线，时刻在变 —— 所以匀速圆周运动不是"匀速运动"', T.white, nar ? 11.5 : 12.5, 'left');
+  }
+
+  /* =====================================================================
+     场景 8：dt3 —— 三种 Δt 选法求同一点（D）的瞬时速度
+     ===================================================================== */
+  function sceneDT3(ctx, W, H, st, S) {
+    var nar = N(W), m = P.TAPE_A, tD = 0.30;
+    var x0 = nar ? 50 : 80, w = W - (nar ? 104 : 200), y0 = nar ? H * 0.24 : H * 0.30;
+    var xf = function (t) { return x0 + P.xOf(m, t) / P.xOf(m, m.T) * w; };
+    line(ctx, x0, y0, x0 + w, y0, T.white, 4.5);
+    var i, t;
+    for (i = 0; i <= 30; i++) {
+      t = i * 0.02;
+      dot(ctx, xf(t), y0, (i % 5 === 0) ? 3.2 : 2.0, (i % 5 === 0) ? T.white : T.grey, true);
+    }
+    dot(ctx, xf(tD), y0, 6.5, T.red); glow(ctx, xf(tD), y0, 6.5, T.red, 9);
+    txt(ctx, xf(tD), y0 - 18, 'D', T.red, 14, 'center', 700);
+    txt(ctx, xf(tD), y0 + 20, 't = 0.30 s', T.grey, 11.5, 'center');
+
+    var opts3 = [
+      { k: 'BD', a: 0.24, b: 0.30, lab: 'D 之前的 BD 段', c: [] },
+      { k: 'CE', a: 0.27, b: 0.33, lab: '包含 D 的 CE 段', c: [] },
+      { k: 'DF', a: 0.30, b: 0.36, lab: 'D 之后的 DF 段', c: [] }
+    ];
+    var vD = P.vOf(m, tD);
+    for (i = 0; i < 3; i++) {
+      var oo = opts3[i], on = (st.pick === i);
+      var yy = y0 + (nar ? 56 : 68) + i * (nar ? 34 : 40);
+      line(ctx, xf(oo.a), yy, xf(oo.b), yy, on ? T.yellow : 'rgba(136,136,136,0.6)', on ? 3.2 : 1.8);
+      dot(ctx, xf(oo.a), yy, 4, on ? T.yellow : T.grey);
+      dot(ctx, xf(oo.b), yy, 4, on ? T.yellow : T.grey);
+      line(ctx, xf(tD), y0 + 8, xf(tD), yy - 8, 'rgba(255,255,255,0.18)', 1, [4, 4]);
+      var vv = P.vAvg(m, oo.a, oo.b), errv = vv - vD;
+      txt(ctx, x0 - 14, yy, oo.k, on ? T.yellow : T.white, 13, 'right', 700);
+      var ext = nar ? ('Δt=' + (oo.b - oo.a).toFixed(2) + '　v̄=' + vv.toFixed(3)) :
+        (oo.lab + '　Δt = ' + (oo.b - oo.a).toFixed(2) + ' s　v̄ = ' + vv.toFixed(3) + ' m/s　' +
+         (Math.abs(errv) < 1e-9 ? '= v_D（精确）' : (errv > 0 ? '比 v_D 大 ' : '比 v_D 小 ') + Math.abs(errv).toFixed(3)));
+      txt(ctx, xf(oo.b) + 14, yy, ext, on ? T.yellow : T.grey, nar ? 11.5 : 12.5, 'left', on ? 600 : 400);
+      S.hits.push({ key: 'pick', x: xf((oo.a + oo.b) / 2), y: yy, r: 22, val: i });
+    }
+    txt(ctx, x0, 16, '同一点 D（t = 0.30 s），三种取段方式：', T.white, nar ? 12 : 13, 'left', 600);
+    txt(ctx, x0, nar ? 36 : 56, 'D 点真值 v_D = ' + vD.toFixed(3) + ' m/s', T.grey, nar ? 11.5 : 12, 'left');
+    txt(ctx, x0, H - 26, nar ? '含 D 且以 D 为中点的那段最准' : '含 D 且以 D 为中点的那一段最准 —— 匀变速运动里，一段的平均速度正好等于该段中间时刻的瞬时速度', T.yellow, nar ? 11.5 : 12.5, 'left', 600);
+  }
+
+  /* =====================================================================
+     场景 9：vt —— v–t 图像（描点 / 平滑曲线 / 两条迷思）
+     ===================================================================== */
+  function vtPoints() {
+    var pts = [], i;
+    for (i = 1; i <= 10; i++) {
+      pts.push([0.06 * i, (P.xOfB(0.06 * i) - P.xOfB(0.06 * (i - 1))) / 0.06]);
+    }
+    return pts;
+  }
+  function sceneVT(ctx, W, H, st, S) {
+    var nar = N(W), o = st.opts || {}, mode = o.mode || 'plot';
+    var plot = { x: nar ? 66 : 92, y: 38, w: W - (nar ? 106 : 300), h: nar ? H * 0.46 : H - 96 };
+    if (mode === 'myth') {
+      var aM = mkAxis(plot.x, plot.y, plot.x + plot.w, plot.y + plot.h, 0, 0.95, -0.6, 0.7);
+      gridAxes(ctx, aM, 0.1, 0.2, 't / s', 'v / (m·s⁻¹)');
+      ticksX(ctx, aM, 0.1, f2, aM.Y(0)); ticksY(ctx, aM, 0.2, f2);
+      var line1 = nar ? H * 0.56 : plot.y + 30, line2 = nar ? H * 0.66 : plot.y + 62;
+      if (st.pick === 1) {
+        var pp = [], i;
+        for (i = 0; i <= 60; i++) { var tt = i / 60 * 0.6; pp.push([aM.X(tt), aM.Y(P.vOfB(tt))]); }
+        poly(ctx, pp, T.yellow, 3);
+        txt(ctx, plot.x, 16, 'v–t 图线是弯的 —— 在做曲线运动吗？', T.white, nar ? 12 : 13, 'left', 600);
+        txt(ctx, plot.x, line1, '不是。', T.yellow, nar ? 16 : 18, 'left', 700);
+        txt(ctx, plot.x, line2, 'v–t 的弯曲只说明速度在变化，', T.white, nar ? 11.5 : 12.5, 'left');
+        txt(ctx, plot.x, line2 + (nar ? 18 : 20), '与轨迹的形状无关。', T.white, nar ? 11.5 : 12.5, 'left');
+        txt(ctx, plot.x, line2 + (nar ? 42 : 62), '真实轨迹：仍是一条直线', T.grey, nar ? 11.5 : 12, 'left');
+        if (!nar) {
+          var lx = plot.x + plot.w + 24, ly = plot.y + 160;
+          line(ctx, lx, ly, lx + 200, ly, T.white, 3);
+          arrow(ctx, lx + 150, ly, lx + 200, ly, T.white, 3, 9);
+          dot(ctx, lx + 60, ly, 5, T.yellow);
+          txt(ctx, lx, ly + 22, '真实轨迹：一条直线', T.grey, 12, 'left');
+        }
+      } else {
+        var pq = [], j;
+        for (j = 0; j <= 60; j++) { var tq = j / 60 * 0.9; pq.push([aM.X(tq), aM.Y(P.mythV(tq))]); }
+        poly(ctx, pq, T.yellow, 3);
+        var zx = aM.X(0.5);
+        ctx.save(); ctx.fillStyle = 'rgba(252,98,85,0.12)';
+        ctx.fillRect(zx, aM.Y(0), aM.right - zx, aM.Y(-0.6) - aM.Y(0)); ctx.restore();
+        txt(ctx, zx + 6, aM.Y(-0.32), 'v < 0：方向反了', T.red, nar ? 11 : 12.5, 'left', 600);
+        txt(ctx, plot.x, 16, '横轴下方那一段，说明物体在减速吗？', T.white, nar ? 12 : 13, 'left', 600);
+        txt(ctx, plot.x, line1, '不是。', T.yellow, nar ? 16 : 18, 'left', 700);
+        txt(ctx, plot.x, line2, '纵轴是速度，不是位置。负值 = 方向相反，', T.white, nar ? 11.5 : 12.5, 'left');
+        txt(ctx, plot.x, line2 + (nar ? 18 : 20), '不等于减速 —— 这一段 |v| 还在变大。', T.white, nar ? 11.5 : 12.5, 'left');
+      }
+      return;
+    }
+    var a = mkAxis(plot.x, plot.y, plot.x + plot.w, plot.y + plot.h, 0, 0.65, 0, 0.85);
+    gridAxes(ctx, a, 0.1, 0.1, 't / s', 'v / (m·s⁻¹)');
+    ticksX(ctx, a, 0.1, f2, a.Y(0)); ticksY(ctx, a, 0.1, f2);
+    var pts = vtPoints(), i2;
+    var dy = (st.bad === undefined) ? 0 : st.bad;
+    var scr = pts.map(function (p, k) { return [a.X(p[0]), a.Y(p[1] + (k === 5 ? dy : 0))]; });
+    if (mode === 'smooth') {
+      poly(ctx, scr, T.grey, 1.8, [7, 5]);
+      var curve = [], i3;
+      for (i3 = 0; i3 <= 60; i3++) { var tv = 0.06 + i3 / 60 * 0.54; curve.push([a.X(tv), a.Y(P.vOfB(tv - 0.03))]); }
+      poly(ctx, curve, T.yellow, 3);
+      txt(ctx, plot.x, 16, '灰折线 = 把点一个个连起来；黄线 = 平滑曲线', T.white, nar ? 12 : 13, 'left', 600);
+      var ly2 = plot.y + plot.h + 26;
+      txt(ctx, plot.x, ly2, '为什么要用平滑曲线？', T.white, nar ? 12.5 : 13, 'left', 700);
+      txt(ctx, plot.x, ly2 + 22, nar ? '跳出去的点多半是测量误差造成的；真实运动是连续的。' : '跳出去的那个点，多半是测量误差造成的；而真实的纸带运动是连续的，不可能突然跳一下。', T.grey, nar ? 11.5 : 12.5, 'left');
+      txt(ctx, plot.x, ly2 + (nar ? 40 : 48), '拖动青色点试试：折线跟着乱动，平滑曲线基本不动。', T.yellow, nar ? 11.5 : 12.5, 'left', 600);
+    } else {
+      txt(ctx, plot.x, 16, '把表 2 的数据描出来：横轴时间、纵轴速度 —— 先描点', T.white, nar ? 12 : 13, 'left', 600);
+      var ly3 = plot.y + plot.h + 26;
+      txt(ctx, plot.x, ly3, '以时间 t 为横轴、速度 v 为纵轴，叫 v–t 图像。', T.yellow, nar ? 11.5 : 12.5, 'left', 600);
+      txt(ctx, plot.x, ly3 + 20, '别和上节课的 x–t 图像搞混（那个纵轴是位移）。', T.grey, nar ? 11.5 : 12, 'left');
+      if (!nar) {
+        txt(ctx, plot.x + plot.w + 24, plot.y + 24, '每一个计数点都有一对 t 和 v。', T.white, 12.5, 'left');
+        txt(ctx, plot.x + plot.w + 24, plot.y + 62, '注意：横轴一定是时间，纵轴一定是速度。', T.grey, 12, 'left');
+      }
+    }
+    for (i2 = 0; i2 < scr.length; i2++) {
+      dot(ctx, scr[i2][0], scr[i2][1], 4.5, T.white);
+    }
+    if (mode === 'smooth') {
+      dot(ctx, scr[5][0], scr[5][1], 6, T.teal);
+      S.hits.push({ key: 'bad', x: scr[5][0], y: scr[5][1], r: 24 });
+      S.grab.bad = function (px, py) { st.bad = Math.max(-0.12, Math.min(0.16, a.invY(py) - pts[5][1])); };
+    }
+  }
+
+  /* =====================================================================
+     场景 10：extrap —— 截距外推（够不到的 Δt = 0，用图线够到）
+     ===================================================================== */
+  function sceneExtrap(ctx, W, H, st, S) {
+    var nar = N(W);
+    var a = mkAxis(94, 36, W - (nar ? 40 : 276), H - 64, -0.02, 0.32, 0.36, 0.50);
+    gridAxes(ctx, a, 0.05, 0.02, nar ? 'Δx / m' : 'Δx / m（遮光片宽度）', 'v̄ / (m·s⁻¹)');
+    ticksX(ctx, a, 0.05, f2s, a.Y(0.36));
+    ticksY(ctx, a, 0.02, f2s);
+    var all = (st.pick === 1) ? P.TABLE12.slice(0, 3) : P.TABLE12;
+    var pts = all.map(function (r) { return [r.d, r.v]; });
+    var f = P.fitLine(pts);
+    /* 直线延伸到 d = 0 */
+    var y0v = f.b, y1v = f.k * 0.30 + f.b;
+    poly(ctx, [[a.X(0), a.Y(y0v)], [a.X(0.30), a.Y(y1v)]], T.purple, 2.4);
+    var i;
+    for (i = 0; i < pts.length; i++) { dot(ctx, a.X(pts[i][0]), a.Y(pts[i][1]), 5, T.white); }
+    /* 截距 */
+    dot(ctx, a.X(0), a.Y(f.b), 7, T.yellow); glow(ctx, a.X(0), a.Y(f.b), 7, T.yellow, 10);
+    dashLine(ctx, a.X(0), a.Y(f.b), a.right, a.Y(f.b), 'rgba(255,255,0,0.32)', 1.2);
+    dashLine(ctx, a.X(0), a.top, a.X(0), a.bottom, 'rgba(255,255,255,0.3)', 1.2);
+    txt(ctx, a.X(0) + 10, a.Y(f.b) - 16, '截距 ' + f.b.toFixed(3) + ' m/s', T.yellow, 13.5, 'left', 700);
+    txt(ctx, a.X(0) + 10, a.Y(f.b) + 6, '就是 Δx = 0 时的速度', T.grey, 11.5, 'left');
+    txt(ctx, a.left, 16, nar ? '以 Δx 为横轴、v̄ 为纵轴，直线延长到纵轴' : '以宽度 Δx 为横轴、以平均速度 v̄ 为纵轴：把点连成一条直线，延长到纵轴', T.white, nar ? 12 : 13, 'left', 600);
+    if (!nar) { txt(ctx, a.left, 34, '注意：横轴左边那个 Δx = 0 的位置，我们**做不出来**——但图线够得到', T.grey, 12, 'left'); }
+    if (nar) {
+      txt(ctx, a.left, H - 34, '官方：< 3.8 cm 后都是 0.41 m/s', T.grey, 11.5, 'left');
+    } else {
+    txt(ctx, W - 262, a.top + 8, '官方数据：', T.white, 12.5, 'left', 600);
+    txt(ctx, W - 262, a.top + 30, '遮光片宽度小于 3.8 cm 之后,', T.grey, 12, 'left');
+    txt(ctx, W - 262, a.top + 48, '平均速度都是 0.41 m/s,', T.grey, 12, 'left');
+    txt(ctx, W - 262, a.top + 66, '即前端 P 到达 A 点的', T.grey, 12, 'left');
+    txt(ctx, W - 262, a.top + 84, '瞬时速度 = 0.41 m/s', T.white, 12, 'left', 600);
+    txt(ctx, W - 262, a.top + 118, '本图外推结果：', T.white, 12.5, 'left', 600);
+    txt(ctx, W - 262, a.top + 140, f.b.toFixed(3) + ' m/s（用了 ' + pts.length + ' 个点）', T.yellow, 13, 'left', 700);
+    txt(ctx, W - 262, a.top + 160, '与 0.41 相差 ' + Math.abs(f.b - 0.41).toFixed(3) + ' m/s', T.grey, 12, 'left');
+    txt(ctx, W - 262, a.top + 178, 'r² = ' + f.r2.toFixed(3), T.grey, 12, 'left');
+    txt(ctx, W - 262, a.top + 210, '理想化外推：够不到的', T.purple, 12.5, 'left', 600);
+    txt(ctx, W - 262, a.top + 228, 'Δt = 0，用图线够到了。', T.purple, 12.5, 'left', 600);
+    }
+  }
+
+  /* =====================================================================
+     场景 11：summary —— 一条链带走
+     ===================================================================== */
+  function sceneSummary(ctx, W, H, st, S) {
+    var nar = N(W);
+    var nodes = [
+      ['位移 ÷ 时间', 'v = Δx / Δt'],
+      ['速度（矢量）', '方向与 Δx 相同'],
+      ['一段 → 平均速度', 'v̄ = Δx / Δt'],
+      ['一点 → 瞬时速度', 'Δt 非常非常小'],
+      ['大小 → 速率', '瞬时速度的大小'],
+      ['怎么量', '纸带：测位移 + 测时间'],
+      ['怎么画', 'v–t 图像'],
+      ['够不到的', '图线截距外推']
+    ];
+    var i;
+    if (nar) {
+      var y0 = 30, step = Math.min(30, (H - 130) / 8);
+      line(ctx, 32, y0, 32, y0 + step * 7, 'rgba(255,255,255,0.28)', 1.4);
+      for (i = 0; i < nodes.length; i++) {
+        var yy = y0 + i * step, on = (st.pick === i);
+        dot(ctx, 32, yy, on ? 6 : 4.5, on ? T.yellow : T.white);
+        txt(ctx, 48, yy, (i + 1) + '. ' + nodes[i][0] + '　' + nodes[i][1], on ? T.yellow : T.white, on ? 12.5 : 11.5, 'left', on ? 700 : 400);
+        S.hits.push({ key: 'pick', x: 32, y: yy, r: Math.max(11, step / 2), val: i });
+      }
+      txt(ctx, 20, H - 44, '我们今天只做了一件事：', T.grey, 12, 'left');
+      txt(ctx, 20, H - 22, '把"位置变化的快慢"从"一段"逼到"一点"。', T.yellow, 15, 'left', 700);
+      return;
+    }
+    var cols = 4, cw = (W - 140) / cols, ch = (H - 150) / 2;
+    for (i = 0; i < nodes.length; i++) {
+      var r = Math.floor(i / cols), c = i % cols;
+      var x = 70 + c * cw, y = 70 + r * (ch + 46);
+      var on2 = (st.pick === i);
+      if (c === 0) { line(ctx, 70, y + 42, 70 + cols * cw - 26, y + 42, 'rgba(255,255,255,0.28)', 1.4); }
+      if (on2) { line(ctx, x, y + 42, x + cw - 26, y + 42, T.yellow, 2.6); }
+      dot(ctx, x, y + 42, on2 ? 7 : 5, on2 ? T.yellow : T.white);
+      txt(ctx, x, y + 12, String(i + 1) + '. ' + nodes[i][0], on2 ? T.yellow : T.white, on2 ? 14 : 13, 'left', 700);
+      txt(ctx, x, y + 66, nodes[i][1], on2 ? T.yellow : T.grey, 12.5, 'left');
+      S.hits.push({ key: 'pick', x: x + 10, y: y + 40, r: 26, val: i });
+    }
+    txt(ctx, 70, H - 44, '我们今天只做了一件事：', T.grey, 13, 'left');
+    txt(ctx, 70, H - 22, '把"位置变化的快慢"这件事，从"一段"逼到"一点"。', T.yellow, 18, 'left', 700);
+  }
+
+  var SCENES = {
+    map: sceneMap, axis: sceneAxis, tape: sceneTape, zoom: sceneZoom,
+    table12: sceneTable12, err: sceneErr, circle: sceneCircle, dt3: sceneDT3,
+    vt: sceneVT, extrap: sceneExtrap, summary: sceneSummary
+  };
+
+  /* ================= 画布适配 ================= */
+  R.fitCanvas = function (cv) {
+    var dpr = window.devicePixelRatio || 1;
+    var W = Math.max(320, cv.clientWidth), H = Math.max(240, cv.clientHeight);
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) {
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    }
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx: ctx, W: W, H: H };
+  };
+
+  R.render = function (cv, st) {
+    var f = R.fitCanvas(cv), ctx = f.ctx, W = f.W, H = f.H;
+    ctx.fillStyle = T.black; ctx.fillRect(0, 0, W, H);
+    var S = { ctx: ctx, W: W, H: H, hits: [], grab: {} };
+    var fn = SCENES[st.scene] || sceneSummary;
+    fn(ctx, W, H, st, S);
+    return S;
+  };
+  R.SCENES = SCENES;
+
+  window.VizRender = R;
+})();
+
+/* =====================================================================
+   viz_sp_steps.js —— 1.3《位置变化快慢的描述——速度》步骤数据
+   一步一个对象：{ act, title, hint, note, formula, allow, init, scene, opts, panel }
+   allow 是唯一交互开关；hint 里说能拖的，allow 里必须有（验收第 5 条）
+   ===================================================================== */
+(function () {
+  'use strict';
+  var P = window.VizPhys;
+  var St = {};
+
+  /* ---------- 数值格式化 ---------- */
+  function fx(v, n) { return (Math.abs(v) < 5e-4 && v !== 0 ? 0 : v).toFixed(n === undefined ? 3 : n); }
+  function sgn(v, n) { return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(n === undefined ? 3 : n); }
+  function R2(label, value, cls) { return { label: label, value: value, cls: cls || '' }; }
+
+  /* ---------- 初始状态 ---------- */
+  St.baseState = function () {
+    return {
+      step: 0, act: '', title: '', hint: '', note: '', formula: '',
+      scene: 'map', opts: {}, allow: {},
+      t: 1, tA: 0.10, tB: 0.20, t1: 0.25, t2: 0.35, tE: 0.30,
+      seg: 0, row: 5, pick: 0, bad: 0, dsel: 0.05
+    };
+  };
+
+  var A = P.TAPE_A;
+
+  /* =====================================================================
+     步骤表
+     ===================================================================== */
+  St.STEPS = [
+    /* ---------------- 幕① 情境导入（教案环节①） ---------------- */
+    {
+      act: '① 情境导入 · 4′',
+      title: '导航屏幕上那条红线：位移，还是路程？',
+      scene: 'map', opts: { mode: 'far' },
+      allow: { t: true },
+      hint: '拖动底栏的 <b>走到哪儿</b> 滑块，让两辆车同时从起点走到同一个终点。',
+      formula: '路程 ÷ 时间　vs　位移 ÷ 时间',
+      note: '两辆车从同一地点同时出发、同时到达同一个终点。' +
+            '它们走过<b>不同的路</b>（绿 12.0 m、紫 6.3 m），' +
+            '可是位置变化一样 —— 红线段（位移）都是 6.3 m。' +
+            '导航卫星给我测速，用的是<b>红线段</b>除以时间；这不是课本规定的，是真实技术就是这么算的。',
+      panel: function (st) {
+        var Lf = P.polyLen(P.PATH_FAR), Ln = P.polyLen(P.PATH_NEAR);
+        var disp = Math.hypot(6, 2), Tt = P.PATH_T;
+        return [
+          R2('绕远的路程', fx(Lf, 1) + ' m', 'green'),
+          R2('走近路的路程', fx(Ln, 1) + ' m', 'purple'),
+          R2('两者的位移', fx(disp, 1) + ' m（相同）', 'red'),
+          R2('所用时间（相同）', fx(Tt, 0) + ' s', 'blue'),
+          R2('路程÷时间（绕远）', fx(Lf / Tt, 2) + ' m/s', 'grey'),
+          R2('路程÷时间（近路）', fx(Ln / Tt, 2) + ' m/s', 'grey'),
+          R2('位移÷时间（两车）', fx(disp / Tt, 2) + ' m/s', 'yellow')
+        ];
+      }
+    },
+    {
+      act: '① 情境导入 · 4′',
+      title: '一东一南：两个 20 m/s 不是同一个速度',
+      scene: 'map', opts: { mode: 'dir' },
+      allow: { t: true },
+      hint: '拖动底栏的 <b>走到哪儿</b> 滑块，让两辆车各自走完 20 m。',
+      formula: '位移 ÷ 时间：既有大小，又有方向',
+      note: '车 A 向东、车 B 向南，都是 1 s 走 20 m。' +
+            '用"路程 ÷ 时间"，两车算出来都是 20 m/s —— <b>分不开它们</b>。' +
+            '可它们的运动明明不一样。所以答案不能只有一个数：<b>速度必须是矢量</b>。',
+      panel: function (st) {
+        var v = 20;
+        return [
+          R2('车 A 的位移', '20 m（向东）', 'red'),
+          R2('车 B 的位移', '20 m（向南）', 'red'),
+          R2('路程÷时间：A / B', '20 / 20 m/s（一样）', 'grey'),
+          R2('速度 A', '20 m/s 向东', 'yellow'),
+          R2('速度 B', '20 m/s 向南', 'yellow'),
+          R2('两个速度相同吗', '不同（方向不同）', 'yellow')
+        ];
+      }
+    },
+
+    /* ---------------- 幕② 速度概念的建立（教案环节②） ---------------- */
+    {
+      act: '② 速度概念的建立 · 9′',
+      title: '只用位移不行，只用时间也不行',
+      scene: 'axis', opts: { mode: 'ratio', motion: 'uniform' },
+      allow: { A: true, B: true },
+      hint: '拖动时间轴上的 <b>A、B 两个青色手柄</b>，把你要的那一段取长、取短、挪一挪。',
+      formula: 'v = Δx / Δt　（比值）',
+      note: '这是<b>匀速直线运动</b>，物体的快慢一点没变。' +
+            '可是你一拖动：Δx 变了、Δt 也变了 —— 只用它们中的任何一个，都会得出不同的答案。' +
+            '只有"<b>位移 ÷ 时间</b>"这个比值不动。' +
+            '比值定义出来的量，<b>不随你用来定义它的那些量的大小取舍而改变</b>。',
+      init: function (st) { st.tA = 0.60; st.tB = 2.40; },
+      panel: function (st) {
+        var m = { x0: 0, v0: 2.0, a: 0, T: 3.0 };
+        var xa = P.xOf(m, st.tA), xb = P.xOf(m, st.tB);
+        var dx = xb - xa, dt = st.tB - st.tA;
+        return [
+          R2('只看位移 Δx', fx(dx, 3) + ' m', 'red'),
+          R2('只看时间 Δt', fx(dt, 3) + ' s', 'blue'),
+          R2('位移 ÷ 时间', fx(dx / dt, 3) + ' m/s', 'yellow'),
+          R2('（拖到哪儿都不变）', '比值 = 2.000 m/s', 'grey')
+        ];
+      }
+    },
+    {
+      act: '② 速度概念的建立 · 9′',
+      title: '此刻才命名：v = Δx / Δt',
+      scene: 'axis', opts: { mode: 'define', motion: 'uniform' },
+      allow: { A: true, B: true },
+      hint: '再拖动 <b>A、B 两个手柄</b>验一遍：无论取哪一段，比值都是同一个数。',
+      formula: 'v = Δx / Δt　单位：m/s（米每秒）',
+      note: '教材原句：<b>"物理学中用位移与发生这段位移所用时间之比表示物体运动的快慢，这就是速度。"</b><br>' +
+            '速度是<b>矢量</b>，方向与 Δt 内的位移 Δx 的方向相同（黄箭头）。' +
+            '注意旁批那句话：这里的速度和初中所学的速度含义不完全相同 —— 初中用路程、只看大小。',
+      panel: function (st) {
+        var m = { x0: 0, v0: 2.0, a: 0, T: 3.0 };
+        var dx = P.xOf(m, st.tB) - P.xOf(m, st.tA), dt = st.tB - st.tA;
+        return [
+          R2('定义式', 'v = Δx / Δt', 'yellow'),
+          R2('本段的 Δx', fx(dx, 3) + ' m', 'red'),
+          R2('本段的 Δt', fx(dt, 3) + ' s', 'blue'),
+          R2('v 的大小', fx(dx / dt, 3) + ' m/s', 'yellow'),
+          R2('v 的方向', '与 Δx 相同', 'yellow'),
+          R2('国际单位', 'm/s（km/h、cm/s）', 'grey'),
+          R2('初中定义', '路程 ÷ 时间（只有大小）', 'grey')
+        ];
+      }
+    },
+
+    /* ---------------- 幕③ 平均速度：一段（教案环节③） ---------------- */
+    {
+      act: '③ 平均速度：一段 · 5′',
+      title: '平均速度，一定要说清是哪一段',
+      scene: 'axis', opts: { mode: 'avg', motion: 'tape' },
+      allow: { A: true, B: true },
+      hint: '拖动纸带两端的 <b>A、B 手柄</b>：D、G 之间正好是 0.1 s，就是教材图 1.3-2 那一段。',
+      formula: '平均速度 v̄ = Δx / Δt（描述一段时间内的平均快慢及方向）',
+      note: '这条是<b>手拉纸带</b>，物体的快慢一直在变，所以每取一段，算出的 v̄ 都不一样。' +
+            '"一段"的平均速度，离开"哪一段"就没有意义 —— ' +
+            '教材图 1.3-2 的 D、G 两点之间正好 <b>0.1 s</b>（5 个点）。' +
+            '平均速度的方向，与这段位移的方向相同（从 A 指向 B）。',
+      init: function (st) { st.tA = 0.10; st.tB = 0.20; },
+      panel: function (st) {
+        var xa = P.xOf(A, st.tA), xb = P.xOf(A, st.tB);
+        var dx = xb - xa, dt = st.tB - st.tA;
+        var vra = P.vOf(A, st.tA), vrb = P.vOf(A, st.tB);
+        return [
+          R2('起点 A', fx(xa, 3) + ' m', 'white'),
+          R2('终点 B', fx(xb, 3) + ' m', 'white'),
+          R2('Δx', fx(dx, 3) + ' m', 'red'),
+          R2('Δt', fx(dt, 3) + ' s', 'blue'),
+          R2('这一段 v̄', fx(dx / dt, 3) + ' m/s', 'yellow'),
+          R2('A、B 的瞬时速度', fx(vra, 3) + ' / ' + fx(vrb, 3) + ' m/s', 'grey'),
+          R2('方向', '由 A 指向 B', 'yellow')
+        ];
+      }
+    },
+    {
+      act: '③ 平均速度：一段 · 5′',
+      title: '"平均速度"不是"速度的平均"',
+      scene: 'tape', opts: { mode: 'avgmean' },
+      allow: { seg: true },
+      hint: '拖动底栏的 <b>选哪一段</b> 滑块，逐段看这三个速度值。',
+      formula: '平均速度 = 总位移 ÷ 总时间　（不是几个速度相加再除以个数）',
+      note: '很多同学会以为"平均速度"就是把各段速度加起来除以个数。' +
+            '把前面三段的 v̄ 平均一下，得到的数和<b>总位移 ÷ 总时间</b>并不相等。' +
+            '教材说的平均速度，永远是<b>谁和谁</b>的比值：总位移 ÷ 总时间。',
+      panel: function (st) {
+        var v1 = P.vAvg(A, 0, 0.1), v2 = P.vAvg(A, 0.1, 0.2), v3 = P.vAvg(A, 0.2, 0.3);
+        var mean = (v1 + v2 + v3) / 3, real = P.vAvg(A, 0, 0.3);
+        var i = Math.min(5, Math.max(0, st.seg | 0));
+        return [
+          R2('第 ' + i + '→' + (i + 1) + ' 段的 Δx', fx(P.xOf(A, 0.1 * (i + 1)) - P.xOf(A, 0.1 * i), 3) + ' m', 'red'),
+          R2('Δt', '0.100 s', 'blue'),
+          R2('该段 v̄', fx(P.vAvg(A, 0.1 * i, 0.1 * (i + 1)), 3) + ' m/s', 'yellow'),
+          R2('前三段速度的平均', fx(mean, 3) + ' m/s', 'purple'),
+          R2('总位移 ÷ 总时间', fx(real, 3) + ' m/s', 'yellow'),
+          R2('两者之差', sgn(mean - real, 3) + ' m/s', 'red')
+        ];
+      }
+    },
+
+    /* ---------------- 幕④ 瞬时速度：一点（教案环节④） ---------------- */
+    {
+      act: '④ 瞬时速度：一点 · 8′',
+      title: 'E 点上，位移和时间都是 0',
+      scene: 'zoom', opts: { mode: 'zero' },
+      allow: { E: true },
+      hint: '把纸带上的 <b>黄色 E 点拖到任何位置</b>，再看读数：Δx 和 Δt 各是多少？',
+      formula: 'Δx = 0，Δt = 0　→　0 ÷ 0 算不出来',
+      note: '把 E 点单独拿出来看，它只是纸带上的一个点：位移是 0、时间是 0，' +
+            '<b>0 ÷ 0 算不出来</b>。<br>' +
+            '错在哪儿？——错在把一个<b>点</b>当成了物体的全部。' +
+            '物体不是"固定在 E 这一点上"，而是<b>在运动中经过 E 点</b>。' +
+            '这两件事完全不一样：位移和时间是"经过"出来的，不是"停在"出来的。',
+      init: function (st) { st.tE = 0.30; },
+      panel: function (st) {
+        var te = (st.tE === undefined) ? 0.30 : st.tE;
+        return [
+          R2('E 的位置', 'x = ' + fx(P.xOf(A, te), 3) + ' m（t = ' + fx(te, 2) + ' s）', 'white'),
+          R2('E 点的位移 Δx', '0 m', 'red'),
+          R2('E 点的时间 Δt', '0 s', 'blue'),
+          R2('Δx ÷ Δt', '0 ÷ 0 —— 算不出来', 'yellow'),
+          R2('拖到哪儿都一样', '0 ÷ 0（换点也不变）', 'red'),
+          R2('错在哪儿', '把物体固定在一点，', 'grey'),
+          R2('', '而不是运动中经过该点', 'grey')
+        ];
+      }
+    },
+    {
+      act: '④ 瞬时速度：一点 · 8′',
+      title: '两端一起向 E 收拢：Δx/Δt 逼向 v_E',
+      scene: 'zoom', opts: { mode: 'limit' },
+      allow: { t1: true, t2: true },
+      hint: '拖动纸带上的 <b>两个青色手柄</b>：先摆到教材图 1.3-2 的 D、G（0.10 s），' +
+            '再摆到图 1.3-3 的 D、F（0.06 s），最后让它们<b>一起</b>向 E 收拢。',
+      formula: 'Δt 非常非常小时，Δx/Δt 就叫物体在时刻 t 的瞬时速度',
+      note: '含 E 的那一段，平均速度可以求；用它粗略代表 E 点的瞬时速度，"不要求很精确也未尝不可"。' +
+            '把间隔取小 —— <b>D、F 两点离 E 点越近，算出的平均速度越接近 E 点的瞬时速度</b>。<br>' +
+            '右下角小图：<b>黄线</b>是两端一起收拢，一直贴着 v_E；' +
+            '<b>灰虚线</b>是只收一端，它收敛到的是那一端的瞬时速度，<b>永远够不到 E</b>。' +
+            '所以教材说"D、F 两点离 E 点越近"——是<b>两点</b>，不是一点。',
+      init: function (st) { st.t1 = 0.25; st.t2 = 0.35; },
+      panel: function (st) {
+        var dx = P.xOf(A, st.t2) - P.xOf(A, st.t1), dt = st.t2 - st.t1;
+        var vra = P.vAvg(A, st.t1, st.t2), vE = P.vOf(A, 0.30);
+        return [
+          R2('左端 t₁', fx(st.t1, 3) + ' s', 'white'),
+          R2('右端 t₂', fx(st.t2, 3) + ' s', 'white'),
+          R2('Δt', fx(dt, 3) + ' s', 'blue'),
+          R2('Δx', fx(dx, 4) + ' m', 'red'),
+          R2('这一段 v̄', fx(vra, 4) + ' m/s', 'yellow'),
+          R2('E 点的真值 v_E', fx(vE, 4) + ' m/s', 'white'),
+          R2('差（误差）', sgn(vra - vE, 4) + ' m/s', Math.abs(vra - vE) < 1e-6 ? 'yellow' : 'red')
+        ];
+      }
+    },
+    {
+      act: '④ 瞬时速度：一点 · 8′',
+      title: '真实数据：0.47 → 0.44 → 0.42 → 0.41',
+      scene: 'table12', opts: {},
+      allow: { row: true },
+      hint: '拖动图上任意一个白点，看这一行的三次计时和算出来的速度。',
+      formula: 'v̄ = Δx / Δt　（同一滑块、同一高度，只换遮光片宽度）',
+      note: '"Δt 非常非常小"这四个字很虚 —— 我们看一组<b>真实数据</b>（教参表 1-2）。' +
+            '滑块从同一高度滑下，前端到达 A 点的速度每次都一样，只换遮光片的宽度：' +
+            '0.300 m → 0.47；0.200 m → 0.44；0.110 m → 0.42；' +
+            '<b>到 0.038 m 以后，0.41、0.41、0.41，不动了。</b><br>' +
+            '官方解读：遮光片宽度小于 3.8 cm 之后，三组数据的平均速度都是 0.41 m/s，' +
+            '就可以代表滑块前端 P 到达 A 点的瞬时速度。',
+      init: function (st) { st.row = 5; },
+      panel: function (st) {
+        var i = Math.min(5, Math.max(0, st.row | 0)), r = P.TABLE12[i];
+        var tm = (r.dt[0] + r.dt[1] + r.dt[2]) / 3;
+        return [
+          R2('遮光片宽度 Δx', (r.d * 100).toFixed(2) + ' cm', 'red'),
+          R2('三次 Δt', r.dt[0].toFixed(3) + ' / ' + r.dt[1].toFixed(3) + ' / ' + r.dt[2].toFixed(3) + ' s', 'blue'),
+          R2('平均 Δt', tm.toFixed(4) + ' s', 'blue'),
+          R2('v̄ = Δx/Δt', (r.d / tm).toFixed(3) + ' m/s', 'yellow'),
+          R2('表上记录值', r.v.toFixed(2) + ' m/s', 'white'),
+          R2('官方给出的瞬时速度', '0.41 m/s', 'yellow')
+        ];
+      }
+    },
+    {
+      act: '④ 瞬时速度：一点 · 8′',
+      title: '是不是时间间隔越短越准？—— 合适 ≠ 最小',
+      scene: 'err', opts: {},
+      allow: { dsel: true },
+      hint: '在图上<b>左右拖动</b>那条白竖线，看两条误差曲线各往哪边走。',
+      formula: '总误差 = 模型偏差（随 d 变小）＋ 测量误差（随 d 变小而变大）',
+      note: '教材旁批那行小字很多人没看过：<b>"D、F 两点间距离过小，测量误差会增大。</b>' +
+            '所以，实际测量中要根据需要及所用仪器的情况，在要测量的点附近选取合适的位移和时间。"<br>' +
+            '模型偏差（红）随 d 减小而减小；测量误差（蓝）随 d 减小而<b>增大</b>' +
+            '（Δx 越小，刻度尺的估读误差占的比例越大）。' +
+            '两条相加（黄）在中间有个<b>最低点</b> —— 所以答案是<b>合适</b>，不是<b>最小</b>。',
+      panel: function (st) {
+        var v0 = 0.41, acc = 0.19, dd = 0.0005, dtm = 0.0005;
+        var d = st.dsel === undefined ? 0.05 : st.dsel;
+        var star = P.bestWidth(v0, acc, dd, dtm, 0.004, 0.30);
+        return [
+          R2('当前遮光片宽度 d', (d * 100).toFixed(2) + ' cm', 'white'),
+          R2('模型偏差', fx(P.plateBias(d, v0, acc), 4) + ' m/s', 'red'),
+          R2('测量误差', fx(P.plateMeasErr(d, v0, acc, dd, dtm), 4) + ' m/s', 'blue'),
+          R2('总误差', fx(P.plateTotalErr(d, v0, acc, dd, dtm), 4) + ' m/s', 'yellow'),
+          R2('最合适的宽度', (star * 100).toFixed(1) + ' cm', 'yellow'),
+          R2('设定值', 'v₀=0.41 m/s，a=0.19 m/s²', 'grey'),
+          R2('', 'δd=0.5 mm，δt=0.5 ms', 'grey')
+        ];
+      }
+    },
+
+    /* ---------------- 幕⑤ 速率与"速度"（教案环节⑤） ---------------- */
+    {
+      act: '⑤ 速率与"速度" · 3′',
+      title: '速度计上的数，是速度还是速率？',
+      scene: 'circle', opts: {},
+      allow: { t: true },
+      hint: '拖动底栏的 <b>走到哪儿</b> 滑块，看黄箭头的方向怎么变、长度怎么变。',
+      formula: '速率 = 瞬时速度的大小（只有大小，没有方向）',
+      note: '黄箭头是速度：<b>长度</b>一直不变（速率恒定），<b>方向</b>时刻在变（沿圆的切线）。' +
+            '所以这个运动<b>不是</b>"匀速运动" —— 速度是矢量，方向变了，速度就变了。<br>' +
+            '速度计（右上的表盘）显示不出车往哪个方向开，它的示数其实是<b>速率</b>。' +
+            '教材：日常生活中说到的"速度"，有时是指速率，要根据上下文判断。',
+      panel: function (st) {
+        var Rr = 1.5, w = 2.0, t = st.t || 0;
+        var vv = P.circleV(Rr, w, t);
+        return [
+          R2('位置（x, y）', '(' + (Rr * Math.cos(w * t)).toFixed(2) + ', ' + (Rr * Math.sin(w * t)).toFixed(2) + ') m', 'white'),
+          R2('速度 x 分量', fx(vv.x, 3) + ' m/s', 'yellow'),
+          R2('速度 y 分量', fx(vv.y, 3) + ' m/s', 'yellow'),
+          R2('速率 |v|', fx(Math.hypot(vv.x, vv.y), 3) + ' m/s（恒定）', 'yellow'),
+          R2('速度计示数', fx(Math.hypot(vv.x, vv.y), 2) + ' m/s', 'yellow'),
+          R2('0.2 s 内速度的变化量', fx(P.dvMag(Rr, w, t, t + 0.2), 3) + ' m/s', 'red'),
+          R2('所以它是匀速运动吗', '不是（方向在变）', 'red')
+        ];
+      }
+    },
+
+    /* ---------------- 幕⑥ 实验：测速度（教案环节⑥） ---------------- */
+    {
+      act: '⑥ 实验：测速度 · 9′',
+      title: '这条纸带能用吗？怎么挑？',
+      scene: 'tape', opts: { mode: 'pick' },
+      allow: { pick: true },
+      hint: '在三条纸带里<b>点一条</b>，看看它符不符合选带标准。',
+      formula: '选带标准：50 cm 内清楚地记录 35~40 个点',
+      note: '打点计时器每 0.02 s 打一个点。纸带拉得合适时，50 cm 内应有 <b>35~40 个点</b>。' +
+            '点太稀（拉得太快或没打上）读不出速度；点太密（拉得太慢）挤成一团也量不准。<br>' +
+            '有老师打了 14 条纸带，<b>目测打得较好的只有 4 条</b>。' +
+            '"完成实验操作，会选择点迹清晰的纸带"，是最容易被老师疏忽的一条实验能力。',
+      panel: function (st) {
+        var c = [
+          { n: 38, ok: true, note: '合格' },
+          { n: 12, ok: false, note: '点太稀' },
+          { n: 62, ok: false, note: '点太密' }
+        ][Math.min(2, Math.max(0, st.pick | 0))];
+        return [
+          R2('你选的纸带', ['甲', '乙', '丙'][Math.min(2, Math.max(0, st.pick | 0))], 'yellow'),
+          R2('50 cm 内的点数', String(c.n), c.ok ? 'yellow' : 'red'),
+          R2('标准', '35 ~ 40 个点', 'grey'),
+          R2('判定', c.ok ? '可以用' : '不能用（' + c.note + '）', c.ok ? 'yellow' : 'red')
+        ];
+      }
+    },
+    {
+      act: '⑥ 实验：测速度 · 9′',
+      title: '实验四步：把"测速度"变成"测位移和测时间"',
+      scene: 'tape', opts: { mode: 'base' },
+      allow: { seg: true },
+      hint: '拖动底栏的 <b>选哪一段</b> 滑块，逐段量一遍相邻计数点。',
+      formula: '① 每 5 个点取一个计数点　② 量各点到 0 的距离 x　③ 算相邻 Δx 与 Δt　④ v = Δx/Δt',
+      note: '速度是一个<b>间接测量量</b>：要知道速度，得先测位移和时间。' +
+            '每两个点之间 0.02 s，每 5 个点取一个计数点就是 <b>0.1 s</b> —— 取整数好算。<br>' +
+            '最容易搞混的一步：量的是<b>"各计数点到起始点 0 的距离 x"</b>，' +
+            '不是"相邻两点之间的距离"。' +
+            '顺带破一个迷思：<b>后面的点越来越密，说明物体越来越慢</b>（相同时间内位移小），' +
+            '不是越来越快。',
+      panel: function (st) {
+        var i = Math.min(5, Math.max(0, st.seg | 0));
+        var x0 = P.xOf(A, 0.1 * i), x1 = P.xOf(A, 0.1 * (i + 1));
+        return [
+          R2('计数点 ' + i + ' 到 0 的距离', fx(x0, 3) + ' m', 'white'),
+          R2('计数点 ' + (i + 1) + ' 到 0 的距离', fx(x1, 3) + ' m', 'white'),
+          R2('相邻位移 Δx', fx(x1 - x0, 3) + ' m', 'red'),
+          R2('对应时间 Δt', '0.100 s', 'blue'),
+          R2('该段平均速度 v', fx((x1 - x0) / 0.1, 3) + ' m/s', 'yellow'),
+          R2('点迹变化', '越往后越疏 → 越来越快', 'grey')
+        ];
+      }
+    },
+    {
+      act: '⑥ 实验：测速度 · 9′',
+      title: '求 D 点的瞬时速度，Δt 选哪一段？',
+      scene: 'dt3', opts: {},
+      allow: { pick: true },
+      hint: '点一下 <b>BD / CE / DF</b> 三条线段中的任意一条，比较三种选法。',
+      formula: '含 D 且以 D 为中点的那一段 → v̄ 精确等于 D 点的瞬时速度',
+      note: '三种选法都有同学用：选 D <b>之前</b>的 BD 段、选<b>包含</b> D 的 CE 段、选 D <b>之后</b>的 DF 段。' +
+            '哪一段更接近？<br>' +
+            '在匀变速直线运动里，<b>一段的平均速度正好等于该段中间时刻的瞬时速度</b>：' +
+            'BD 偏小、DF 偏大、CE 精确。' +
+            '这也解释了上一幕为什么要"两端一起向 E 收拢"——' +
+            '要让区间<b>中点</b>落在你要的那个时刻上。',
+      init: function (st) { st.pick = 1; },
+      panel: function (st) {
+        var vD = P.vOf(A, 0.30), o = [[0.24, 0.30, 'BD'], [0.27, 0.33, 'CE'], [0.30, 0.36, 'DF']][Math.min(2, Math.max(0, st.pick | 0))];
+        var vv = P.vAvg(A, o[0], o[1]);
+        return [
+          R2('选中', o[2] + ' 段（Δt = ' + (o[1] - o[0]).toFixed(2) + ' s）', 'yellow'),
+          R2('该段 Δx', fx(P.xOf(A, o[1]) - P.xOf(A, o[0]), 4) + ' m', 'red'),
+          R2('该段 v̄', fx(vv, 4) + ' m/s', 'yellow'),
+          R2('D 点真值 v_D', fx(vD, 4) + ' m/s', 'white'),
+          R2('误差', sgn(vv - vD, 4) + ' m/s', Math.abs(vv - vD) < 1e-9 ? 'yellow' : 'red'),
+          R2('BD / DF 各偏多少', '∓ a·Δt/2 = ' + fx(A.a * 0.03, 3) + ' m/s', 'grey')
+        ];
+      }
+    },
+
+    /* ---------------- 幕⑦ v–t 图像（教案环节⑦） ---------------- */
+    {
+      act: '⑦ v–t 图像 · 5′',
+      title: '先描点，别连线',
+      scene: 'vt', opts: { mode: 'plot' },
+      allow: {},
+      hint: '这一步只看：每 0.06 s 一个点，一共 10 个点。',
+      formula: '以时间 t 为横轴、速度 v 为纵轴 → v–t 图像',
+      note: '这是<b>另一条</b>手拉纸带的表 2：从起始点 0 起，后面每 3 个点取一个计数点，' +
+            '所以每 <b>0.06 s</b> 算一次速度。<br>' +
+            '横着数时间、竖着数速度，一对一对地描出来 —— <b>先描点，别连线</b>。' +
+            '注意横轴一定是时间、纵轴一定是速度，别和上节课的 x–t 图像搞混。',
+      panel: function (st) {
+        var pts = [], i;
+        for (i = 1; i <= 10; i++) { pts.push(P.xOfB(0.06 * i) - P.xOfB(0.06 * (i - 1))); }
+        var vmin = Math.min.apply(null, pts) / 0.06, vmax = Math.max.apply(null, pts) / 0.06;
+        return [
+          R2('数据点数', '10 个（t = 0.06 ~ 0.60 s）', 'white'),
+          R2('计数点间隔', '0.06 s（每 3 个点）', 'blue'),
+          R2('速度范围', fx(vmin, 2) + ' ~ ' + fx(vmax, 2) + ' m/s', 'yellow'),
+          R2('你看到了什么', '速度越来越大', 'yellow'),
+          R2('横轴', '时间 t / s', 'grey'),
+          R2('纵轴', '速度 v / (m·s⁻¹)', 'grey')
+        ];
+      }
+    },
+    {
+      act: '⑦ v–t 图像 · 5′',
+      title: '为什么用平滑曲线，而不是把点连起来？',
+      scene: 'vt', opts: { mode: 'smooth' },
+      allow: { bad: true },
+      hint: '<b>上下拖动第 6 个青色数据点</b>，看灰色折线和黄色平滑曲线分别怎么变。',
+      formula: '用一条平滑的曲线描出这些点，曲线所反映的情况就会与实际比较接近',
+      note: '教材原句：<b>"如果用一条平滑的曲线来描出这些点，曲线所反映的情况就会与实际比较接近。"</b><br>' +
+            '跳出去的那个点，多半是<b>测量误差</b>造成的；而真实的纸带运动是连续的，' +
+            '不可能突然跳一下。你把那个点往上一拖，折线立刻跟着乱动，平滑曲线却几乎不动 —— ' +
+            '这就是"平滑"在做的事：<b>不让一个坏点带偏整条线</b>。' +
+            '每人都要亲手把自己的点连起来。',
+      init: function (st) { st.bad = 0.055; },
+      panel: function (st) {
+        var dy = st.bad === undefined ? 0 : st.bad;
+        var bad = (P.xOfB(0.36) - P.xOfB(0.30)) / 0.06 + dy;
+        var trend = P.vOfB(0.36 - 0.03);
+        return [
+          R2('第 6 个点（t = 0.36 s）', fx(bad, 3) + ' m/s', 'yellow'),
+          R2('趋势值（平滑曲线上）', fx(trend, 3) + ' m/s', 'white'),
+          R2('偏差', sgn(bad - trend, 3) + ' m/s', 'red'),
+          R2('偏差的来源', '测量误差', 'grey'),
+          R2('该怎么处理', '用平滑曲线，不硬连', 'yellow')
+        ];
+      }
+    },
+    {
+      act: '⑦ v–t 图像 · 5′',
+      title: '两条 v–t 迷思',
+      scene: 'vt', opts: { mode: 'myth' },
+      allow: { pick: true },
+      hint: '点底栏的 <b>图线在横轴下方 / 图线是弯的</b> 两个按钮，各看一遍。',
+      formula: '负值 = 运动方向相反（不是减速）　曲线 = 速度在变（不是做曲线运动）',
+      note: '<b>迷思一：</b>"这段线在横轴下面，说明物体在减速。"<br>' +
+            '错。纵轴是速度，不是位置。图线在横轴下方表示速度为负，也就是<b>运动方向反了</b>；' +
+            '而且这一段 |v| 还在变大 —— 它是反向，同时还在加速。<br>' +
+            '<b>迷思二：</b>"这条线是弯的，说明物体在做曲线运动。"<br>' +
+            '也错。v–t 图线的弯曲只说明<b>速度在变化</b>，与轨迹的形状无关（右边那条轨迹仍是直线）。',
+      init: function (st) { st.pick = 0; },
+      panel: function (st) {
+        var k = st.pick | 0;
+        if (k === 1) {
+          return [
+            R2('看图线', 'v–t 是曲线', 'yellow'),
+            R2('说明什么', '速度在变化', 'yellow'),
+            R2('能说明轨迹吗', '不能', 'red'),
+            R2('真实轨迹', '仍是一条直线', 'white')
+          ];
+        }
+        return [
+          R2('t = 0.5 s 时', 'v = 0', 'white'),
+          R2('t > 0.5 s', 'v < 0 → 反向运动', 'red'),
+          R2('这一段的 |v|', '在变大（在加速）', 'yellow'),
+          R2('所以"负值"等于', '反向，不等于减速', 'yellow')
+        ];
+      }
+    },
+    {
+      act: '⑦ v–t 图像 · 5′',
+      title: '够不到的 Δt = 0，用图线够到',
+      scene: 'extrap', opts: {},
+      allow: { pick: true },
+      hint: '点底栏的 <b>全部 6 个点 / 只用前 3 个点</b> 两个按钮，看截距怎么变。',
+      formula: '直线与纵轴的交点 = Δx = 0 时的速度 = 瞬时速度（理想化外推）',
+      note: '以遮光片宽度 Δx 为横轴、以平均速度 v̄ 为纵轴，把点连成一条直线，' +
+            '<b>延长到纵轴</b>——交点就是 Δx = 0 时的速度，也就是滑块通过光电门的瞬时速度。<br>' +
+            '横轴左边那个 Δx = 0 的位置，我们<b>做不出来</b>（遮光片再薄也有厚度，纸带最小间隔也只有 0.02 s）；' +
+            '但是图线够得到。这叫<b>理想化外推</b>，也是环节⑥ 开头答应你们的那个"另一种办法"。<br>' +
+            '注意：外推靠的是数据范围 —— 只用最宽的三块遮光片去外推，截距会偏；' +
+            '<b>可用点越靠近纵轴，外推越可靠</b>。',
+      init: function (st) { st.pick = 0; },
+      panel: function (st) {
+        var all = (st.pick === 1) ? P.TABLE12.slice(0, 3) : P.TABLE12;
+        var f = P.fitLine(all.map(function (r) { return [r.d, r.v]; }));
+        var f6 = P.fitLine(P.table12Pts());
+        return [
+          R2('用于拟合的点数', String(all.length) + ' 个', 'white'),
+          R2('拟合斜率', fx(f.k, 4), 'purple'),
+          R2('截距（= 瞬时速度）', fx(f.b, 4) + ' m/s', 'yellow'),
+          R2('官方给出的值', '0.410 m/s', 'white'),
+          R2('相差', fx(Math.abs(f.b - P.V_A_OFFICIAL), 4) + ' m/s', 'red'),
+          R2('拟合优度 r²', fx(f.r2, 4), 'grey'),
+          R2('用全部 6 点时', fx(f6.b, 4) + ' m/s', 'grey')
+        ];
+      }
+    },
+
+    /* ---------------- 幕⑧ 小结 · 评价 · 作业（教案环节⑧） ---------------- */
+    {
+      act: '⑧ 小结 · 2′',
+      title: '一条链带走',
+      scene: 'summary', opts: {},
+      allow: { pick: true },
+      hint: '点一下链条上的任意一环，黄圈会停在那里。',
+      formula: '一段 → 一点；比值 → 极限；测量 → 图像 → 外推',
+      note: '今天只做了一件事：把"位置变化的快慢"从<b>一段</b>逼到<b>一点</b>。<br>' +
+            '位移与时间之比 → <b>速度</b>（矢量，方向跟位移走）→ 只看一段是<b>平均速度</b>；' +
+            'Δt 非常非常小是<b>瞬时速度</b> → 大小叫<b>速率</b> → ' +
+            '怎么量？纸带上测位移和时间 → 怎么表达？v–t 图像 → ' +
+            '够不到的 Δt = 0？<b>用图线截距外推</b>。<br>' +
+            '下节课讲加速度 —— 注意"加速度"<b>不是</b>"速度增加"。',
+      init: function (st) { st.pick = -1; },
+      panel: function (st) {
+        var k = st.pick | 0;
+        var rows = [
+          ['1 位移 ÷ 时间', 'v = Δx / Δt'],
+          ['2 速度是矢量', '方向与 Δx 相同'],
+          ['3 平均速度', '一段：v̄ = Δx/Δt'],
+          ['4 瞬时速度', 'Δt 非常非常小'],
+          ['5 速率', '瞬时速度的大小'],
+          ['6 测速度', '纸带：测位移 + 测时间'],
+          ['7 v–t 图像', '横轴 t、纵轴 v'],
+          ['8 截距外推', '够不到的，用图线够到']
+        ];
+        if (k >= 0 && k < rows.length) {
+          return [R2('第 ' + rows[k][0], rows[k][1], 'yellow'), R2('本课金句', '把间隔一次次缩小，', 'grey'), R2('', '不是把 Δt 真的变成 0', 'grey')];
+        }
+        return [
+          R2('本课主线', '一段 → 一点', 'yellow'),
+          R2('金句', '把间隔一次次缩小，', 'grey'),
+          R2('', '不是把 Δt 真的变成 0。', 'grey'),
+          R2('下节伏笔', '加速度 ≠ 速度增加', 'blue')
+        ];
+      }
+    }
+  ];
+
+  /* ---------- 步骤机：纯重建（"上一步"永远精确复原） ---------- */
+  St.apply = function (st, i) {
+    if (i < 0 || i >= St.STEPS.length) { return; }
+    var def = St.STEPS[i];
+    /* 先复位全部交互量，再让 init 覆盖 —— 保证逐步独立 */
+    var fresh = St.baseState();
+    for (var k in fresh) { if (fresh.hasOwnProperty(k)) { st[k] = fresh[k]; } }
+    st.step = i;
+    st.act = def.act; st.title = def.title; st.hint = def.hint || '';
+    st.note = def.note || ''; st.formula = def.formula || '';
+    st.scene = def.scene; st.opts = def.opts || {}; st.allow = def.allow || {};
+    if (def.init) { def.init(st); }
+    return st;
+  };
+
+  St.keyOf = function (key) { return key; };
+
+  window.VizSteps = St;
+})();
+
+/* =====================================================================
+   viz_sp_app.js —— 交互层：翻页 / 拖动 / 滑块 / 读数 / 自检接口
+   翻页用 VizSteps.apply() 纯重建，所以"上一步"永远精确复原。
+   ===================================================================== */
+(function () {
+  'use strict';
+  var P = window.VizPhys, R = window.VizRender, St = window.VizSteps;
+  var cv = document.getElementById('cv');
+  var st = St.baseState();
+  var S = null;              // 上一帧的几何（命中测试用）
+  var drag = null;
+
+  function $(id) { return document.getElementById(id); }
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+
+  /* ---------- 底栏"选项"按钮的文案（按场景给） ---------- */
+  function pickLabels(s) {
+    var o = s.opts || {};
+    if (s.scene === 'tape' && o.mode === 'pick') { return { lab: '纸带', list: ['甲（疏密适中）', '乙（点太稀）', '丙（点太密）'] }; }
+    if (s.scene === 'dt3') { return { lab: '选段', list: ['BD 段', 'CE 段', 'DF 段'] }; }
+    if (s.scene === 'vt' && o.mode === 'myth') { return { lab: '迷思', list: ['图线在横轴下方', '图线是弯的'] }; }
+    if (s.scene === 'extrap') { return { lab: '拟合用点', list: ['全部 6 个点', '只用前 3 个点'] }; }
+    return null;   // summary 等：只在画布上点，不在底栏出按钮
+  }
+
+  /* ================= 渲染 ================= */
+  function draw() {
+    S = R.render(cv, st);
+    updatePanel();
+    updateControls();
+    markToc();
+  }
+
+  /* ================= 读数面板 ================= */
+  function updatePanel() {
+    var def = St.STEPS[st.step] || {};
+    var rows = [];
+    try { rows = def.panel ? def.panel(st) : []; } catch (e) { rows = [{ label: '读数出错', value: String(e.message), cls: 'red' }]; }
+    var html = '', i;
+    for (i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      html += '<div class="rd"><span>' + (r.label || '') + '</span><b class="' + (r.cls || '') + '">' + r.value + '</b></div>';
+    }
+    $('rows').innerHTML = html;
+    $('rdFormula').innerHTML = st.formula || '—';
+    $('rdNote').innerHTML = st.note || '—';
+  }
+
+  /* ================= 底栏控件 ================= */
+  function show(el, on) { if (el) { el.classList[on ? 'remove' : 'add']('hidden'); } }
+  var pickBuilt = -1;
+
+  function updateControls() {
+    var a = st.allow || {};
+    show($('wrapT'), !!a.t);
+    show($('wrapSeg'), !!a.seg);
+
+    var pl = a.pick ? pickLabels(st) : null;
+    show($('wrapPick'), !!pl);
+    if (pl) {
+      if (pickBuilt !== st.step) {
+        pickBuilt = st.step;
+        $('pickLab').textContent = pl.lab;
+        var box = $('pickBtns'), h = '';
+        for (var i = 0; i < pl.list.length; i++) {
+          h += '<button data-pick="' + i + '">' + pl.list[i] + '</button>';
+        }
+        box.innerHTML = h;
+        var bs = box.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) {
+          bs[j].addEventListener('click', function () {
+            st.pick = parseInt(this.getAttribute('data-pick'), 10);
+            draw();
+          });
+        }
+      }
+      var pb = $('pickBtns').querySelectorAll('button');
+      for (var k = 0; k < pb.length; k++) {
+        pb[k].className = (parseInt(pb[k].getAttribute('data-pick'), 10) === (st.pick | 0)) ? 'on' : '';
+      }
+    }
+
+    $('stepTitle').textContent = st.title;
+    $('actTag').textContent = String(st.act).split('·')[0].trim();
+    $('stepSn').textContent = (st.step + 1) + ' / ' + St.STEPS.length;
+    $('hint').innerHTML = st.hint || '';
+    $('prog').firstElementChild.style.width = ((st.step + 1) / St.STEPS.length * 100) + '%';
+
+    $('rgT').value = Math.round((st.t || 0) * 100);
+    $('lbT').textContent = Math.round((st.t || 0) * 100) + '%';
+    $('rgSeg').value = st.seg | 0;
+    $('lbSeg').textContent = '第 ' + (st.seg | 0) + '→' + ((st.seg | 0) + 1) + ' 段';
+  }
+
+  /* ================= 翻页 ================= */
+  function go(i) { if (i < 0 || i >= St.STEPS.length) { return; } St.apply(st, i); draw(); }
+  function next() { go(st.step + 1); }
+  function prev() { go(st.step - 1); }
+  function resetStep() { go(st.step); }
+
+  $('btnNext').addEventListener('click', next);
+  $('btnPrev').addEventListener('click', prev);
+  $('btnReset').addEventListener('click', resetStep);
+
+  $('prog').addEventListener('click', function (ev) {
+    var r = this.getBoundingClientRect();
+    go(Math.floor(clamp((ev.clientX - r.left) / r.width, 0, 0.999) * St.STEPS.length));
+  });
+  (function ticks() {
+    var bar = $('prog');
+    for (var i = 1; i < St.STEPS.length; i++) {
+      var u = document.createElement('u');
+      u.style.left = (i / St.STEPS.length * 100) + '%';
+      bar.appendChild(u);
+    }
+  })();
+
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'ArrowRight' || ev.key === 'PageDown') { next(); ev.preventDefault(); }
+    else if (ev.key === 'ArrowLeft' || ev.key === 'PageUp') { prev(); ev.preventDefault(); }
+    else if (ev.key === 'Home') { go(0); ev.preventDefault(); }
+    else if (ev.key === 'End') { go(St.STEPS.length - 1); ev.preventDefault(); }
+  });
+
+  /* ================= 滑块 ================= */
+  $('rgT').addEventListener('input', function () { st.t = parseFloat(this.value) / 100; draw(); });
+  $('rgSeg').addEventListener('input', function () { st.seg = parseInt(this.value, 10); draw(); });
+
+  /* ================= 画布拖动 ================= */
+  function evPos(ev) {
+    var r = cv.getBoundingClientRect();
+    var t = ev.touches ? ev.touches[0] : ev;
+    return { x: t.clientX - r.left, y: t.clientY - r.top };
+  }
+  function hitOf(p) {
+    if (!S || !S.hits) { return null; }
+    var best = null, bd = 1e9, i, h, d;
+    var allow = st.allow || {};
+    for (i = 0; i < S.hits.length; i++) {
+      h = S.hits[i];
+      if (!allow[h.key]) { continue; }
+      d = Math.hypot(p.x - h.x, p.y - h.y);
+      if (d < h.r && d < bd) { bd = d; best = h; }
+    }
+    return best;
+  }
+  function applyHit(h, p) {
+    var g = S.grab && S.grab[h.key];
+    if (g) { g(p.x, p.y); return true; }
+    if (h.val !== undefined) { st[h.key] = h.val; return true; }
+    return false;
+  }
+  function onDown(ev) {
+    var p = evPos(ev), h = hitOf(p);
+    if (!h) { return; }
+    if (applyHit(h, p)) {
+      if (S.grab && S.grab[h.key]) {
+        drag = { key: h.key };
+        cv.style.cursor = 'grabbing';
+      }
+      draw();
+      ev.preventDefault();
+    }
+  }
+  function onMove(ev) {
+    if (!drag) {
+      var h = hitOf(evPos(ev));
+      cv.style.cursor = h ? 'grab' : 'default';
+      return;
+    }
+    var p = evPos(ev), g = S.grab && S.grab[drag.key];
+    if (g) { g(p.x, p.y); draw(); }
+    ev.preventDefault();
+  }
+  function onUp() { if (drag) { drag = null; cv.style.cursor = 'default'; } }
+
+  cv.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
+  cv.addEventListener('mousedown', onDown);
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+  cv.addEventListener('touchstart', onDown, { passive: false });
+  cv.addEventListener('touchmove', onMove, { passive: false });
+  window.addEventListener('touchend', onUp);
+
+  var rzT = null;
+  window.addEventListener('resize', function () { clearTimeout(rzT); rzT = setTimeout(draw, 120); });
+
+  /* ================= 顶部步骤导航条 ================= */
+  var tocEl = $('toc'), tocLinks = [], tocMarked = -1;
+  (function buildToc() {
+    var curAct = null;
+    for (var i = 0; i < St.STEPS.length; i++) {
+      var def = St.STEPS[i];
+      if (def.act !== curAct) {
+        if (curAct !== null) {
+          var sp = document.createElement('span'); sp.className = 'sep'; tocEl.appendChild(sp);
+        }
+        curAct = def.act;
+        var lab = document.createElement('span');
+        lab.className = 'grouplab';
+        lab.textContent = String(def.act).split('·')[0].trim();
+        lab.title = def.act;
+        tocEl.appendChild(lab);
+      }
+      var a = document.createElement('a');
+      a.title = (i + 1) + '. ' + def.title;
+      a.textContent = String(i + 1);
+      (function (idx, node) { node.addEventListener('click', function () { go(idx); }); })(i, a);
+      tocEl.appendChild(a);
+      tocLinks.push(a);
+    }
+  })();
+  function markToc() {
+    if (!tocLinks.length || tocMarked === st.step) { return; }
+    tocMarked = st.step;
+    for (var i = 0; i < tocLinks.length; i++) {
+      var on = (i === st.step);
+      tocLinks[i].className = on ? 'on' : '';
+      if (on && tocLinks[i].scrollIntoView) { tocLinks[i].scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+    }
+  }
+
+  /* ================= 自检 / 调试接口 ================= */
+  function hash() {
+    var f = R.fitCanvas(cv);
+    var W = Math.floor(f.W), H = Math.floor(f.H);
+    var d = f.ctx.getImageData(0, 0, W, H).data;
+    var h = 2166136261 >>> 0;
+    for (var i = 0; i < d.length; i += 61) { h ^= d[i]; h = (h * 16777619) >>> 0; }
+    return ('00000000' + h.toString(16)).slice(-8);
+  }
+
+  /** 交互一致性：每一步 allow 里的键，画面上或底栏里必须真有对应控件 */
+  var FOOTER_KEYS = { t: true, seg: true, pick: true };
+  function checkAllow() {
+    var out = [], save = st.step, i, k;
+    var backup = JSON.parse(JSON.stringify(st));
+    for (i = 0; i < St.STEPS.length; i++) {
+      St.apply(st, i);
+      var meta = pickLabels(st) ? ['pick'] : [];
+      var sc = R.render(cv, st);
+      var keys = {};
+      for (k = 0; k < sc.hits.length; k++) { keys[sc.hits[k].key] = true; }
+      var allow = st.allow || {}, missing = [];
+      for (k in allow) {
+        if (!allow.hasOwnProperty(k)) { continue; }
+        if (keys[k]) { continue; }
+        if (FOOTER_KEYS[k] && (meta.indexOf(k) >= 0 || k === 't' || k === 'seg')) { continue; }
+        missing.push(k);
+      }
+      /* hint ⊆ allow：提示里出现"拖动/点一下"时，allow 必须非空 */
+      var hinted = /拖|点一下|点底栏|点链/.test(St.STEPS[i].hint || '');
+      if (hinted && Object.keys(allow).length === 0) { missing.push('hint 说了能操作但 allow 为空'); }
+      if (missing.length) { out.push({ step: i + 1, title: St.STEPS[i].title, missing: missing }); }
+    }
+    /* 复位 */
+    for (k in backup) { if (backup.hasOwnProperty(k)) { st[k] = backup[k]; } }
+    st.step = save; draw();
+    return { ok: out.length === 0, bad: out, total: St.STEPS.length };
+  }
+
+  /** 前后一致性：逐步走一遍再倒着走回来，比对每一步的像素指纹 */
+  function roundTrip() {
+    var i, fwd = [], back = [], save = st.step;
+    for (i = 0; i < St.STEPS.length; i++) { St.apply(st, i); R.render(cv, st); fwd.push(hash()); }
+    for (i = St.STEPS.length - 1; i >= 0; i--) { St.apply(st, i); R.render(cv, st); }
+    for (i = St.STEPS.length - 1; i >= 0; i--) { St.apply(st, i); R.render(cv, st); back[i] = hash(); }
+    var bad = 0;
+    for (i = 0; i < fwd.length; i++) { if (fwd[i] !== back[i]) { bad++; } }
+    go(save);
+    return { mismatch: bad, steps: fwd.length };
+  }
+
+  window.__viz = {
+    state: st,
+    count: St.STEPS.length,
+    go: go, next: next, prev: prev, reset: resetStep, draw: draw,
+    hash: hash,
+    render: R, phys: P, steps: St,
+    selfTest: function () { return P.runSelfTest(); },
+    verifySpeed: function () { return P.verifySpeed(); },
+    checkAllow: checkAllow,
+    hits: function () { return (S && S.hits) ? S.hits.map(function (h) { return { key: h.key, x: h.x, y: h.y, r: h.r, val: h.val }; }) : []; },
+    canvasRect: function () { var r = cv.getBoundingClientRect(); return { left: r.left, top: r.top, w: r.width, h: r.height }; },
+    roundTrip: roundTrip,
+    stepMeta: function () {
+      return St.STEPS.map(function (d, i) {
+        return { i: i, act: d.act, title: d.title, scene: d.scene, allow: Object.keys(d.allow || {}), hint: d.hint || '' };
+      });
+    }
+  };
+
+  /* ================= 启动 ================= */
+  St.apply(st, 0);
+  draw();
+  setTimeout(draw, 60);
+})();
+
+</script>
+</body>
+</html>
